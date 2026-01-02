@@ -10,10 +10,11 @@ import {
   Sparkles, Send, ImageIcon, Video, Camera, Image as LucideImage, 
   Settings, Zap, BrainCircuit, Loader2, Download, Maximize, X, 
   MessageSquare, FileText, ChevronRight, Wand2, Terminal, ShieldCheck,
-  Pin, PinOff, UploadCloud, FileUp, GripHorizontal, Palette, Film
+  Pin, PinOff, UploadCloud, FileUp, GripHorizontal, Palette, Film, FilePlus
 } from 'lucide-react';
 import Tooltip from './Tooltip';
 import ImageViewer from './ImageViewer';
+import { Section } from './Section';
 
 const SIZES = ["1K", "2K", "4K"];
 const RATIOS = ["1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "21:9"];
@@ -73,24 +74,15 @@ const AiStudio: React.FC = () => {
     }
   }, []);
 
-  // Save history persistence
   useEffect(() => {
-    try {
-        localStorage.setItem('link2ink_chat_history', JSON.stringify(history));
-    } catch (e) {
-        console.warn("Failed to save history to localStorage", e);
-    }
+    try { localStorage.setItem('link2ink_chat_history', JSON.stringify(history)); } catch (e) {}
   }, [history]);
 
-  // Save pinned files persistence
   useEffect(() => {
     try {
-        // Only persist pinned files to manage storage quota better
         const pinnedFiles = files.filter(f => f.pinned);
         localStorage.setItem('link2ink_pinned_files', JSON.stringify(pinnedFiles));
-    } catch (e) {
-        console.warn("Failed to save files to localStorage", e);
-    }
+    } catch (e) {}
   }, [files]);
 
   useEffect(() => {
@@ -129,6 +121,8 @@ const AiStudio: React.FC = () => {
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    // Only set to false if we are leaving the main drop zone, not entering a child
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
     setIsDragging(false);
   }, []);
 
@@ -149,12 +143,11 @@ const AiStudio: React.FC = () => {
     }
   }, [tab]);
 
-  // File Reordering Logic
   const handleFileDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', index.toString());
     e.dataTransfer.effectAllowed = 'move';
     setDraggedFileIndex(index);
-    e.stopPropagation(); // Prevent interfering with global drag
+    e.stopPropagation();
   };
 
   const handleFileDropOnItem = (e: React.DragEvent, targetIndex: number) => {
@@ -172,17 +165,9 @@ const AiStudio: React.FC = () => {
     setDraggedFileIndex(null);
   };
 
-  const removeFile = (id: string) => {
-    setFiles(prev => prev.filter(f => f.id !== id));
-  };
-
-  const toggleFilePin = (id: string) => {
-      setFiles(prev => prev.map(f => f.id === id ? { ...f, pinned: !f.pinned } : f));
-  };
-
-  const toggleMessagePin = (id: string) => {
-      setHistory(prev => prev.map(m => m.id === id ? { ...m, pinned: !m.pinned } : m));
-  };
+  const removeFile = (id: string) => setFiles(prev => prev.filter(f => f.id !== id));
+  const toggleFilePin = (id: string) => setFiles(prev => prev.map(f => f.id === id ? { ...f, pinned: !f.pinned } : f));
+  const toggleMessagePin = (id: string) => setHistory(prev => prev.map(m => m.id === id ? { ...m, pinned: !m.pinned } : m));
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -227,7 +212,6 @@ const AiStudio: React.FC = () => {
             pinned: false
         }]);
         
-        // Clear files that are NOT pinned
         setFiles(prev => prev.filter(f => f.pinned));
       } catch (err) {
         setHistory(prev => [...prev, {
@@ -259,7 +243,7 @@ const AiStudio: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 mb-20">
+    <Section className="space-y-8 mb-20">
       {fullScreenImage && <ImageViewer src={fullScreenImage.src} alt={fullScreenImage.alt} onClose={() => setFullScreenImage(null)} />}
 
       <div className="text-center space-y-4">
@@ -269,7 +253,7 @@ const AiStudio: React.FC = () => {
         <p className="text-slate-400 font-light tracking-wide">Advanced multimodal lab powered by Nano Banana Pro.</p>
       </div>
 
-      <div className="grid lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Navigation / Control Sidebar */}
         <div className="lg:col-span-3 space-y-6">
           <div className="glass-panel rounded-2xl p-2 space-y-1">
@@ -476,17 +460,25 @@ const AiStudio: React.FC = () => {
 
              {/* Input Bar */}
              <div 
-                className={`p-6 bg-slate-950/80 border-t border-white/5 space-y-4 transition-colors ${isDragging ? 'bg-indigo-500/10 border-indigo-500/50' : ''}`}
+                className={`p-6 bg-slate-950/80 border-t border-white/5 space-y-4 transition-all duration-300 relative ${isDragging ? 'bg-indigo-500/10 border-indigo-500/50' : ''}`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
             >
-                {/* Drag Overlay */}
+                {/* Visual Drag Overlay */}
                 {isDragging && tab === 'chat' && (
-                    <div className="absolute inset-0 z-50 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center border-2 border-dashed border-indigo-500/50 rounded-b-3xl pointer-events-none">
-                        <div className="flex flex-col items-center gap-3 animate-bounce">
-                            <UploadCloud className="w-10 h-10 text-indigo-400" />
-                            <p className="text-lg font-bold text-indigo-300">Drop files to attach</p>
+                    <div className="absolute inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center border-2 border-dashed border-indigo-500 rounded-b-3xl">
+                        <div className="flex flex-col items-center gap-6 animate-bounce">
+                            <div className="p-6 bg-indigo-500/20 rounded-full shadow-neon-indigo">
+                                <UploadCloud className="w-16 h-16 text-indigo-300" />
+                            </div>
+                            <div className="space-y-2 text-center">
+                                <p className="text-xl font-bold text-white tracking-wide">Drop Media Here</p>
+                                <div className="flex items-center gap-3 justify-center text-sm text-indigo-300 font-mono">
+                                    <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded"><ImageIcon className="w-4 h-4" /> Images</span>
+                                    <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded"><Film className="w-4 h-4" /> Videos</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -563,9 +555,9 @@ const AiStudio: React.FC = () => {
                             <button 
                               type="button" 
                               onClick={() => fileInputRef.current?.click()}
-                              className="p-2 text-slate-500 hover:text-indigo-400 transition-colors"
+                              className="p-2 text-slate-500 hover:text-indigo-400 transition-colors hover:bg-white/5 rounded-lg"
                             >
-                               <ImageIcon className="w-5 h-5" />
+                               <FilePlus className="w-5 h-5" />
                             </button>
                          </Tooltip>
                          <input ref={fileInputRef} type="file" className="hidden" accept="image/*,video/*" multiple onChange={handleFileUpload} />
@@ -592,17 +584,11 @@ const AiStudio: React.FC = () => {
                       )}
                    </div>
                 </form>
-                {/* Drag hint */}
-                {!isDragging && tab === 'chat' && files.length === 0 && (
-                    <div className="absolute right-24 bottom-6 pointer-events-none opacity-30 hidden md:flex items-center gap-2 text-[10px] font-mono text-slate-400">
-                        <FileUp className="w-3 h-3" /> Drag & Drop supported
-                    </div>
-                )}
              </div>
           </div>
         </div>
       </div>
-    </div>
+    </Section>
   );
 };
 

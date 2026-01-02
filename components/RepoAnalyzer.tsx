@@ -12,6 +12,7 @@ import { AlertCircle, Loader2, Layers, Box, Download, Sparkles, Command, Palette
 import { LoadingState } from './LoadingState';
 import ImageViewer from './ImageViewer';
 import Tooltip from './Tooltip';
+import { Section } from './Section';
 
 interface RepoAnalyzerProps {
   onNavigate: (mode: ViewMode, data?: any) => void;
@@ -20,14 +21,14 @@ interface RepoAnalyzerProps {
 }
 
 const FLOW_STYLES = [
-    "Modern Data Flow",
-    "Hand-Drawn Blueprint",
-    "Corporate Minimal",
-    "Neon Cyberpunk",
-    "Abstract Geometric",
-    "Vintage Poster",
-    "Dark Mode Tech",
-    "Custom"
+    { id: "Modern Data Flow", label: "Modern Flow", color: "from-blue-500 to-cyan-400" },
+    { id: "Hand-Drawn Blueprint", label: "Blueprint", color: "from-white to-slate-300" },
+    { id: "Corporate Minimal", label: "Minimal", color: "from-slate-400 to-slate-600" },
+    { id: "Neon Cyberpunk", label: "Cyberpunk", color: "from-fuchsia-500 to-purple-600" },
+    { id: "Abstract Geometric", label: "Geometric", color: "from-emerald-400 to-teal-500" },
+    { id: "Vintage Poster", label: "Vintage", color: "from-orange-400 to-amber-600" },
+    { id: "Dark Mode Tech", label: "Dark Tech", color: "from-slate-700 to-slate-900 border-white/20" },
+    { id: "Custom", label: "Custom", color: "from-slate-500 to-slate-500" }
 ];
 
 const LANGUAGES = [
@@ -50,22 +51,18 @@ const LANGUAGES = [
 
 const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate, history, onAddToHistory }) => {
   const [repoInput, setRepoInput] = useState('');
-  const [selectedStyle, setSelectedStyle] = useState(FLOW_STYLES[0]);
+  const [selectedStyle, setSelectedStyle] = useState(FLOW_STYLES[0].id);
   const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[0].value);
   const [customStyle, setCustomStyle] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingStage, setLoadingStage] = useState<string>('');
-  
-  // Infographic State
   const [infographicData, setInfographicData] = useState<string | null>(null);
   const [infographic3DData, setInfographic3DData] = useState<string | null>(null);
   const [generating3D, setGenerating3D] = useState(false);
   const [generatingGraph, setGeneratingGraph] = useState(false);
   const [currentFileTree, setCurrentFileTree] = useState<RepoFileTree[] | null>(null);
   const [currentRepoName, setCurrentRepoName] = useState<string>('');
-  
-  // Viewer State
   const [fullScreenImage, setFullScreenImage] = useState<{src: string, alt: string} | null>(null);
 
   const parseRepoInput = (input: string): { owner: string, repo: string } | null => {
@@ -96,8 +93,6 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate, history, onAddT
 
   const handleApiError = (err: any) => {
       if (err.message && err.message.includes("Requested entity was not found")) {
-          // This specific error often implies a Free Tier key is trying to access a Paid Model.
-          // We trigger the window reload to re-open the key selection.
           const confirmSwitch = window.confirm(
               "BILLING REQUIRED: The current API key does not have access to these models.\n\n" +
               "This feature requires a paid Google Cloud Project. Please switch to a valid paid API Key."
@@ -156,7 +151,6 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate, history, onAddT
     if (!currentFileTree || !currentRepoName) return;
     setGenerating3D(true);
     try {
-      // Pass the same selected style to the 3D generator
       const styleToUse = selectedStyle === 'Custom' ? customStyle : selectedStyle;
       const data = await generateInfographic(currentRepoName, currentFileTree, styleToUse, true, selectedLanguage);
       if (data) {
@@ -193,19 +187,16 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate, history, onAddT
   const loadFromHistory = (item: RepoHistoryItem) => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       setCurrentRepoName(item.repoName);
-      // Since history items don't store the full file tree (too large), we just show the image.
-      // If user wants to generate 3D from history of a 2D, they'd need to re-fetch.
-      // For simplicity, we display the historical image in the appropriate slot.
       if (item.is3D) {
           setInfographic3DData(item.imageData);
       } else {
           setInfographicData(item.imageData);
-          setInfographic3DData(null); // Clear 3D if loading a 2D history item to avoid confusion
+          setInfographic3DData(null);
       }
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-10 mb-20">
+    <Section className="space-y-10 mb-20">
       
       {fullScreenImage && (
           <ImageViewer 
@@ -216,119 +207,129 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate, history, onAddT
       )}
 
       {/* Hero Section */}
-      <div className="text-center max-w-3xl mx-auto space-y-6">
-        <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-200 to-slate-500 font-sans leading-tight">
-          Codebase <span className="text-violet-400">Intelligence</span>.
-        </h2>
-        <p className="text-slate-400 text-lg md:text-xl font-light tracking-wide">
-          Turn any repository into a fully analyzed, interactive architectural blueprint.
-        </p>
+      <div className="grid grid-cols-1 md:grid-cols-12">
+        <div className="md:col-start-3 md:col-span-8 text-center space-y-6">
+            <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-200 to-slate-500 font-sans leading-tight">
+            Codebase <span className="text-violet-400">Intelligence</span>.
+            </h2>
+            <p className="text-slate-400 text-lg md:text-xl font-light tracking-wide">
+            Turn any repository into a fully analyzed, interactive architectural blueprint.
+            </p>
+        </div>
       </div>
 
       {/* Input Section */}
-      <div className="max-w-xl mx-auto relative z-10">
-        <form onSubmit={handleAnalyze} className="glass-panel rounded-2xl p-2 transition-all focus-within:ring-1 focus-within:ring-violet-500/50 focus-within:border-violet-500/50 relative">
-          
-          <div className="flex items-center">
-             <div className="pl-3 text-slate-500">
-                <Command className="w-5 h-5" />
-             </div>
-             <input
-                type="text"
-                value={repoInput}
-                onChange={(e) => setRepoInput(e.target.value)}
-                placeholder="owner/repository"
-                className="w-full bg-transparent border-none text-white placeholder:text-slate-600 focus:ring-0 text-lg px-4 py-2 font-mono"
-              />
-              <div className="pr-2 relative">
-                <button
-                type="submit"
-                disabled={loading || !repoInput.trim()}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 border border-white/10 font-mono text-sm relative z-10"
-                >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "RUN_ANALYSIS"}
-                </button>
-                {/* Pro Indicator */}
-                {!loading && (
-                    <div className="absolute -top-3 -right-2 pointer-events-none z-20">
-                         <Tooltip content="Pro Model Enabled" position="top">
-                            <div className="bg-emerald-500 text-[8px] font-bold text-slate-900 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-lg border border-white/20">
-                                <ShieldCheck className="w-2 h-2" /> PRO
-                            </div>
-                         </Tooltip>
+      <div className="grid grid-cols-1 md:grid-cols-12">
+          <div className="md:col-start-4 md:col-span-6 relative z-10">
+            <form onSubmit={handleAnalyze} className="glass-panel rounded-2xl p-2 transition-all focus-within:ring-1 focus-within:ring-violet-500/50 focus-within:border-violet-500/50 relative">
+            
+            <div className="flex items-center">
+                <div className="pl-3 text-slate-500">
+                    <Command className="w-5 h-5" />
+                </div>
+                <input
+                    type="text"
+                    value={repoInput}
+                    onChange={(e) => setRepoInput(e.target.value)}
+                    placeholder="owner/repository"
+                    className="w-full bg-transparent border-none text-white placeholder:text-slate-600 focus:ring-0 text-lg px-4 py-2 font-mono"
+                />
+                <div className="pr-2 relative">
+                    <button
+                    type="submit"
+                    disabled={loading || !repoInput.trim()}
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 border border-white/10 font-mono text-sm relative z-10"
+                    >
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "RUN_ANALYSIS"}
+                    </button>
+                    {/* Pro Indicator */}
+                    {!loading && (
+                        <div className="absolute -top-3 -right-2 pointer-events-none z-20">
+                            <Tooltip content="Pro Model Enabled" position="top">
+                                <div className="bg-emerald-500 text-[8px] font-bold text-slate-900 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-lg border border-white/20">
+                                    <ShieldCheck className="w-2 h-2" /> PRO
+                                </div>
+                            </Tooltip>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Controls: Style and Language */}
+            <div className="mt-2 pt-2 border-t border-white/5 px-3 pb-1 space-y-3">
+                {/* Style Selector */}
+                <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-slate-500 font-mono text-[10px] uppercase tracking-wider shrink-0">
+                        <Palette className="w-3 h-3" /> Style Preset:
                     </div>
-                )}
-             </div>
-          </div>
+                    <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+                        {FLOW_STYLES.map(style => (
+                            <button
+                                key={style.id}
+                                type="button"
+                                onClick={() => setSelectedStyle(style.id)}
+                                className={`relative group flex flex-col items-center gap-1 p-1 rounded-lg transition-all ${
+                                    selectedStyle === style.id 
+                                    ? 'bg-white/10 ring-1 ring-violet-500/50' 
+                                    : 'hover:bg-white/5'
+                                }`}
+                                title={style.label}
+                            >
+                                <div className={`w-8 h-8 rounded-md bg-gradient-to-br ${style.color} shadow-sm group-hover:scale-105 transition-transform`}></div>
+                                <span className={`text-[8px] font-mono truncate w-full text-center ${selectedStyle === style.id ? 'text-white' : 'text-slate-500'}`}>
+                                    {style.label}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                
+                {/* Language Selector & Custom Style Input */}
+                <div className="flex flex-wrap gap-3 pt-1">
+                  <div className="flex items-center gap-2 bg-slate-950/50 border border-white/10 rounded-lg px-2 py-1 shrink-0 min-w-0 max-w-full">
+                      <Globe className="w-3 h-3 text-slate-500 shrink-0" />
+                      <select
+                          value={selectedLanguage}
+                          onChange={(e) => setSelectedLanguage(e.target.value)}
+                          className="bg-transparent border-none text-xs text-slate-300 focus:ring-0 p-0 font-mono cursor-pointer min-w-0 flex-1 truncate"
+                      >
+                          {LANGUAGES.map((lang) => (
+                          <option key={lang.value} value={lang.value} className="bg-slate-900 text-slate-300">
+                              {lang.label}
+                          </option>
+                          ))}
+                      </select>
+                  </div>
 
-          {/* Controls: Style and Language */}
-          <div className="mt-2 pt-2 border-t border-white/5 px-3 pb-1 space-y-3">
-             {/* Style Selector */}
-             <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
-                 <div className="flex items-center gap-1.5 text-slate-500 font-mono text-[10px] uppercase tracking-wider shrink-0">
-                     <Palette className="w-3 h-3" /> Style:
-                 </div>
-                 <div className="flex gap-2">
-                     {FLOW_STYLES.map(style => (
-                         <button
-                            key={style}
-                            type="button"
-                            onClick={() => setSelectedStyle(style)}
-                            className={`text-[11px] px-2.5 py-1 rounded-md font-mono transition-all whitespace-nowrap ${
-                                selectedStyle === style 
-                                ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30' 
-                                : 'bg-white/5 text-slate-500 hover:text-slate-300 border border-transparent hover:border-white/10'
-                            }`}
-                         >
-                             {style}
-                         </button>
-                     ))}
-                 </div>
-             </div>
-             
-             {/* Language Selector & Custom Style Input */}
-             <div className="flex flex-wrap gap-3">
-               <div className="flex items-center gap-2 bg-slate-950/50 border border-white/10 rounded-lg px-2 py-1 shrink-0 min-w-0 max-w-full">
-                  <Globe className="w-3 h-3 text-slate-500 shrink-0" />
-                  <select
-                    value={selectedLanguage}
-                    onChange={(e) => setSelectedLanguage(e.target.value)}
-                    className="bg-transparent border-none text-xs text-slate-300 focus:ring-0 p-0 font-mono cursor-pointer min-w-0 flex-1 truncate"
-                  >
-                    {LANGUAGES.map((lang) => (
-                      <option key={lang.value} value={lang.value} className="bg-slate-900 text-slate-300">
-                        {lang.label}
-                      </option>
-                    ))}
-                  </select>
-               </div>
-
-               {selectedStyle === 'Custom' && (
-                   <input 
-                      type="text" 
-                      value={customStyle}
-                      onChange={(e) => setCustomStyle(e.target.value)}
-                      placeholder="Custom style..."
-                      className="flex-1 min-w-[120px] bg-slate-950/50 border border-white/10 rounded-lg px-3 py-1 text-xs text-slate-200 placeholder:text-slate-600 focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500/50 font-mono transition-all"
-                   />
-               )}
-             </div>
-          </div>
-        </form>
+                  {selectedStyle === 'Custom' && (
+                      <input 
+                          type="text" 
+                          value={customStyle}
+                          onChange={(e) => setCustomStyle(e.target.value)}
+                          placeholder="Custom style..."
+                          className="flex-1 min-w-[120px] bg-slate-950/50 border border-white/10 rounded-lg px-3 py-1 text-xs text-slate-200 placeholder:text-slate-600 focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500/50 font-mono transition-all"
+                      />
+                  )}
+                </div>
+            </div>
+            </form>
+        </div>
       </div>
 
       {error && (
-        <div className="max-w-2xl mx-auto p-4 glass-panel border-red-500/30 rounded-xl flex items-center gap-3 text-red-400 animate-in fade-in slide-in-from-top-2 font-mono text-sm">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-500" />
-          <p className="flex-1">{error}</p>
-          {error.includes("Required") && (
-              <button 
-                onClick={() => window.location.reload()}
-                className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded text-xs font-bold transition-colors flex items-center gap-1"
-              >
-                 <KeyRound className="w-3 h-3" /> SWITCH KEY
-              </button>
-          )}
+        <div className="grid grid-cols-1 md:grid-cols-12">
+            <div className="md:col-start-4 md:col-span-6 p-4 glass-panel border-red-500/30 rounded-xl flex items-center gap-3 text-red-400 animate-in fade-in slide-in-from-top-2 font-mono text-sm">
+                <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-500" />
+                <p className="flex-1">{error}</p>
+                {error.includes("Required") && (
+                    <button 
+                        onClick={() => window.location.reload()}
+                        className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded text-xs font-bold transition-colors flex items-center gap-1"
+                    >
+                        <KeyRound className="w-3 h-3" /> SWITCH KEY
+                    </button>
+                )}
+            </div>
         </div>
       )}
 
@@ -340,9 +341,9 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate, history, onAddT
       {infographicData && !loading && (
         <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               {/* 2D Infographic Card */}
-              <div className="glass-panel rounded-3xl p-1.5 flex flex-col">
+              <div className="md:col-span-6 glass-panel rounded-3xl p-1.5 flex flex-col">
                  <div className="px-4 py-3 flex flex-wrap items-center justify-between border-b border-white/5 mb-1.5 gap-2">
                     <h3 className="text-sm font-bold text-white flex items-center gap-2 font-mono uppercase tracking-wider">
                       <Layers className="w-4 h-4 text-violet-400" /> Flow_Diagram
@@ -382,7 +383,7 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate, history, onAddT
               </div>
 
               {/* 3D Infographic Card */}
-              <div className="glass-panel rounded-3xl p-1.5 flex flex-col">
+              <div className="md:col-span-6 glass-panel rounded-3xl p-1.5 flex flex-col">
                  <div className="px-4 py-3 flex flex-wrap items-center justify-between border-b border-white/5 mb-1.5 shrink-0 gap-2">
                     <h3 className="text-sm font-bold text-slate-300 flex items-center gap-2 font-mono uppercase tracking-wider">
                       <Box className="w-4 h-4 text-fuchsia-400" /> Holographic_Model
@@ -439,7 +440,7 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate, history, onAddT
                   <Clock className="w-4 h-4" />
                   <h3 className="text-sm font-mono uppercase tracking-wider">Recent Blueprints</h3>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {history.map((item) => (
                       <button 
                         key={item.id}
@@ -461,7 +462,7 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate, history, onAddT
               </div>
           </div>
       )}
-    </div>
+    </Section>
   );
 };
 

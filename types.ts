@@ -70,6 +70,15 @@ export interface ArticleHistoryItem {
     date: Date;
 }
 
+export interface CodeHistoryItem {
+  id: string;
+  prompt: string;
+  code: string;
+  language: string;
+  mode: string;
+  date: Date;
+}
+
 declare global {
   interface AIStudio {
     hasSelectedApiKey: () => Promise<boolean>;

@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -82,8 +83,8 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ initialState, onNavigate }) =
   const triggerUpload = () => inputRef.current?.click();
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="text-center max-w-3xl mx-auto space-y-6 mb-12">
+    <div className="space-y-12">
+      <div className="text-center max-w-3xl mx-auto space-y-6">
         <h2 className="text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-fuchsia-300 via-pink-300 to-slate-500 font-sans">
           Reality <span className="text-pink-500">Engine</span>.
         </h2>
@@ -92,9 +93,9 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ initialState, onNavigate }) =
         </p>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Input Column */}
-        <div className="space-y-6">
+        <div className="lg:col-span-6 space-y-6">
           {/* Upload Area */}
           <div 
             onClick={triggerUpload}
@@ -185,7 +186,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({ initialState, onNavigate }) =
         </div>
 
         {/* Output Column */}
-        <div className="space-y-6 lg:sticky lg:top-24">
+        <div className="lg:col-span-6 space-y-6 lg:sticky lg:top-24">
           <div className="glass-panel rounded-3xl aspect-[4/3] flex items-center justify-center overflow-hidden relative p-1.5">
             <div className="w-full h-full bg-slate-950/50 rounded-2xl flex items-center justify-center overflow-hidden relative">
                 {processing ? (
