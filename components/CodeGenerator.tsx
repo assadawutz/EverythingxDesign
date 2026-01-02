@@ -6,7 +6,7 @@
 
 import React, { useState, useRef } from 'react';
 import { generateCodeSnippet } from '../services/geminiService';
-import { Code2, Wand2, Loader2, Copy, Check, Terminal, FileCode, ImageIcon, X, Sparkles, BookOpen, ChevronRight, Layers, LayoutTemplate } from 'lucide-react';
+import { Code2, Wand2, Loader2, Copy, Check, Terminal, FileCode, ImageIcon, X, Sparkles, BookOpen, ChevronRight, Layers, LayoutTemplate, Database, Monitor } from 'lucide-react';
 import Tooltip from './Tooltip';
 
 const LANGUAGES = [
@@ -19,6 +19,11 @@ const LANGUAGES = [
   "Go",
   "SQL",
   "Bash Script"
+];
+
+const MODES = [
+    { id: 'ui', label: 'UI / Design', icon: Monitor, desc: "Pixel-perfect visual implementation" },
+    { id: 'logic', label: 'Logic / Backend', icon: Database, desc: "Functions, APIs, and Algorithms" }
 ];
 
 // Context injection for V4 specifics since models might be trained on V3 data.
@@ -37,28 +42,33 @@ const EXAMPLE_PROMPTS = [
   {
     title: "Design to Code (UI)",
     prompt: "Convert the attached UI design screenshot into a pixel-perfect, fully responsive website. \n\nRequirements:\n- Use semantic HTML5 and Tailwind CSS.\n- Match the colors, typography, spacing, and shadows exactly as seen in the image.\n- Ensure it is mobile-responsive.\n- Use FontAwesome or Lucide for icons where appropriate.",
-    lang: "HTML/CSS Tailwind v3"
+    lang: "HTML/CSS Tailwind v3",
+    mode: 'ui'
   },
   {
     title: "v4 3D Card",
     prompt: "Create a Tailwind v4 card component with 3D hover effects using 'perspective', 'rotate-x', and 'transform-3d'. Include a 'bg-linear-to-tr' gradient background.",
-    lang: "Tailwind CSS v4 (Full Stack)"
+    lang: "Tailwind CSS v4 (Full Stack)",
+    mode: 'ui'
   },
   {
     title: "React + Tailwind",
     prompt: "Create a React component for a responsive navigation bar with a glassmorphism effect, including a mobile drawer and active link states using Tailwind CSS.",
-    lang: "TypeScript (React)"
+    lang: "TypeScript (React)",
+    mode: 'ui'
   },
   {
     title: "API Integration",
     prompt: "Write a Python FastAPI endpoint that handles multi-part file uploads, validates image MIME types, and stores them in an S3 bucket with error handling.",
-    lang: "Python (FastAPI)"
+    lang: "Python (FastAPI)",
+    mode: 'logic'
   }
 ];
 
 const CodeGenerator: React.FC = () => {
   const [prompt, setPrompt] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[0]);
+  const [selectedMode, setSelectedMode] = useState('ui');
   const [loading, setLoading] = useState(false);
   const [generatedCode, setGeneratedCode] = useState('');
   const [copied, setCopied] = useState(false);
@@ -76,6 +86,8 @@ const CodeGenerator: React.FC = () => {
           mimeType: file.type,
           preview: base64
         });
+        // Auto-switch to UI mode when image is uploaded
+        setSelectedMode('ui');
       };
       reader.readAsDataURL(file);
     }
@@ -91,10 +103,19 @@ const CodeGenerator: React.FC = () => {
     // Inject v4 knowledge if selected
     let systemContext = selectedLanguage.includes("v4") ? TAILWIND_V4_CONTEXT : undefined;
 
-    // Enhance prompt for image-to-code scenarios
+    // Enhance prompt based on mode
     let finalPrompt = prompt;
+    
+    if (selectedMode === 'ui') {
+        // UI Mode Enhancements
+        finalPrompt = `[MODE: UI/DESIGN IMPLEMENTATION]\nYou are an expert Front-end Engineer specialized in pixel-perfect implementation.\n\nTASK: ${prompt}\n\nSTRICT RULES:\n- If an image is provided, analyze layout, spacing, colors, and typography meticulously.\n- Use modern, responsive best practices.\n- Output pure, ready-to-run code.`;
+    } else {
+        // Logic Mode Enhancements
+        finalPrompt = `[MODE: BACKEND/LOGIC]\nYou are a Senior Software Architect.\n\nTASK: ${prompt}\n\nSTRICT RULES:\n- Focus on performance, security, and error handling.\n- Write clean, commented, and efficient code.\n- Follow standard design patterns for the selected language.`;
+    }
+    
     if (contextImage) {
-        finalPrompt = `[VISUAL TO CODE TASK]\nYou are an expert Front-end Engineer. Your task is to convert the attached UI Design Screenshot into high-quality code.\n\nINSTRUCTIONS:\n1. Analyze the layout, colors, fonts, and spacing in the image meticulously.\n2. Write the code to reproduce this visual design as closely as possible.\n3. ${prompt}`;
+        finalPrompt = `[VISUAL REFERENCE ATTACHED]\n${finalPrompt}`;
     }
 
     try {
@@ -116,6 +137,7 @@ const CodeGenerator: React.FC = () => {
   const applyExample = (ex: typeof EXAMPLE_PROMPTS[0]) => {
     setPrompt(ex.prompt);
     setSelectedLanguage(ex.lang);
+    setSelectedMode(ex.mode);
   };
 
   const copyToClipboard = () => {
@@ -131,7 +153,7 @@ const CodeGenerator: React.FC = () => {
           Ink<span className="text-indigo-400">2Code</span>.
         </h2>
         <p className="text-slate-400 text-lg font-light tracking-wide">
-          Transform Figma designs (PNG) or visual blueprints into high-quality source code.
+          Production-grade code generation. From Figma design to React/Tailwind in seconds.
         </p>
       </div>
 
@@ -139,17 +161,33 @@ const CodeGenerator: React.FC = () => {
         {/* Left Pane: Input & Examples */}
         <div className="space-y-6">
           <form onSubmit={handleGenerate} className="glass-panel rounded-3xl p-6 md:p-8 space-y-6 flex flex-col h-full">
+            
+            {/* Mode Switcher */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-900/50 rounded-xl border border-white/5">
+                {MODES.map(mode => (
+                    <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => setSelectedMode(mode.id)}
+                        className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-mono font-bold transition-all ${selectedMode === mode.id ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                        <mode.icon className="w-3.5 h-3.5" />
+                        {mode.label}
+                    </button>
+                ))}
+            </div>
+
             <div className="space-y-4 flex-1">
               <label className="text-xs text-indigo-400 font-mono tracking-wider flex items-center justify-between">
-                <span className="flex items-center gap-2 uppercase"><Terminal className="w-4 h-4" /> Requirement_Input</span>
-                <Tooltip content="Describe logic, architecture, or UI" position="top">
-                  <Sparkles className="w-4 h-4 opacity-50" />
-                </Tooltip>
+                <span className="flex items-center gap-2 uppercase"><Terminal className="w-4 h-4" /> Spec_Input</span>
+                <span className="text-[10px] text-slate-500 font-normal normal-case opacity-70">
+                    {selectedMode === 'ui' ? "Describe layout & style" : "Describe functionality & logic"}
+                </span>
               </label>
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Ex: Convert this attached screenshot into a React component..."
+                placeholder={selectedMode === 'ui' ? "Ex: Convert this attached screenshot into a React component..." : "Ex: Write a sorting algorithm for..."}
                 className="w-full h-48 bg-slate-950/50 border border-white/10 rounded-2xl p-5 text-slate-200 placeholder:text-slate-700 focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 font-mono text-sm leading-relaxed transition-all resize-none custom-scrollbar"
               />
             </div>
@@ -172,7 +210,7 @@ const CodeGenerator: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Visual Reference (Export Figma to PNG)</label>
+                <label className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Visual Reference</label>
                 {contextImage ? (
                   <div className="relative group">
                     <div className="w-full h-[41px] bg-indigo-500/10 border border-indigo-500/30 rounded-xl flex items-center px-3 gap-2 overflow-hidden">
@@ -191,9 +229,9 @@ const CodeGenerator: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full h-[41px] bg-slate-900/50 border border-white/10 hover:border-indigo-500/50 rounded-xl flex items-center justify-center gap-2 text-slate-500 hover:text-indigo-400 transition-all font-mono text-[10px]"
+                    className={`w-full h-[41px] bg-slate-900/50 border border-white/10 hover:border-indigo-500/50 rounded-xl flex items-center justify-center gap-2 transition-all font-mono text-[10px] ${selectedMode === 'ui' ? 'text-indigo-400 border-indigo-500/30' : 'text-slate-500 hover:text-indigo-400'}`}
                   >
-                    <ImageIcon className="w-4 h-4" /> ATTACH_DESIGN
+                    <ImageIcon className="w-4 h-4" /> {selectedMode === 'ui' ? "UPLOAD_DESIGN" : "ATTACH_REF"}
                   </button>
                 )}
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
@@ -206,14 +244,14 @@ const CodeGenerator: React.FC = () => {
               className="w-full py-4 bg-indigo-500/10 hover:bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 rounded-2xl font-bold transition-all flex items-center justify-center gap-3 font-mono tracking-widest disabled:opacity-50 hover:shadow-neon-indigo"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Wand2 className="w-5 h-5" />}
-              {loading ? "ENGINEERING..." : "GENERATE_CODE"}
+              {loading ? "INITIALIZING_ENGINE..." : "GENERATE_SOURCE"}
             </button>
           </form>
 
           {/* Examples Card */}
           <div className="glass-panel rounded-3xl p-6 space-y-4">
              <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 uppercase tracking-widest">
-                <BookOpen className="w-3.5 h-3.5" /> Quick_Tasks
+                <BookOpen className="w-3.5 h-3.5" /> Quick_Patterns
              </div>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {EXAMPLE_PROMPTS.map((ex, idx) => (
@@ -265,7 +303,7 @@ const CodeGenerator: React.FC = () => {
                   </div>
                   <p className="animate-pulse tracking-widest text-[10px] uppercase">Compiling Logic...</p>
                   {contextImage && (
-                      <p className="text-[9px] text-emerald-400/70 font-mono">Analyzing Visual Structure...</p>
+                      <p className="text-[9px] text-emerald-400/70 font-mono">Scanning UI Topology...</p>
                   )}
                   {selectedLanguage.includes("v4") && (
                       <p className="text-[9px] text-indigo-400/70 font-mono">Injecting Tailwind v4 Engine...</p>

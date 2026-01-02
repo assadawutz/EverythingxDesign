@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { ViewMode } from '../types';
-import { GitBranch, FileText, Link, BrainCircuit, Image, Sparkles, ArrowRight, Code2 } from 'lucide-react';
+import { GitBranch, FileText, Link, BrainCircuit, Image, Sparkles, ArrowRight, Code2, Layers, Cpu, Terminal } from 'lucide-react';
 import Tooltip from './Tooltip';
 
 interface HomeProps {
@@ -18,24 +18,56 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
     <div className="max-w-4xl mx-auto space-y-20 mb-20">
       {/* Hero Section */}
       <div className="text-center space-y-6 pt-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm font-mono text-slate-300 mb-2">
-            <Sparkles className="w-4 h-4 text-fuchsia-400" />
-            <span>Powered by Nano Banana Pro</span>
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-sm font-mono text-indigo-300 mb-2">
+            <Terminal className="w-4 h-4" />
+            <span>v2.0: Dev-First Engine Active</span>
         </div>
         
-        <h1 className="text-6xl md:text-7xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-200 to-slate-500 font-sans leading-tight">
-          Link 2 Ink
+        <h1 className="text-6xl md:text-7xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-indigo-100 to-slate-500 font-sans leading-tight">
+          Link 2 <span className="text-indigo-400">Code</span>
         </h1>
         
         <p className="text-slate-400 text-xl font-light max-w-2xl mx-auto leading-relaxed">
-          Turn links into clear, professional infographics and functional code instantly.
+          The autonomous engineering platform. Convert <span className="text-white font-medium">Designs to Code</span>, map repository architecture, and ship faster.
         </p>
 
-        {/* Vertical Action Stack */}
+        {/* Vertical Action Stack - Reordered for Dev Priority */}
         <div className="flex flex-col items-center gap-6 pt-8 w-full max-w-[800px] mx-auto">
             
-            {/* GitHub Option */}
-            <Tooltip content="Visualize code architecture from GitHub" position="left">
+            {/* 1. Ink2Code (Design to Code) - PRIMARY */}
+            <Tooltip content="Upload Figma/Screenshots -> Get React/Tailwind Code" position="left">
+                <div className="w-full flex items-center gap-4 group relative">
+                    <button 
+                        onClick={() => onNavigate(ViewMode.CODE_GENERATOR)}
+                        className="w-full glass-panel p-6 rounded-2xl bg-indigo-900/10 hover:bg-indigo-500/10 transition-all border border-indigo-500/20 hover:border-indigo-400/50 text-left group-hover:translate-x-1 group-hover:shadow-neon-indigo relative overflow-hidden"
+                    >
+                         <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <Layers className="w-32 h-32 -rotate-12" />
+                        </div>
+                        <div className="flex items-center gap-6 relative z-10">
+                            <div className="p-4 bg-indigo-500 rounded-xl text-white shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
+                                <Code2 className="w-8 h-8" />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-bold text-white group-hover:text-indigo-200 transition-colors">Ink2Code Engine</h3>
+                                <p className="text-sm text-slate-400 font-mono mt-1 group-hover:text-slate-300 flex items-center gap-2">
+                                    <span className="text-emerald-400">●</span> Design to Code
+                                    <span className="text-slate-600">|</span>
+                                    <span>UI Scaffold</span>
+                                    <span className="text-slate-600">|</span>
+                                    <span>Refactoring</span>
+                                </p>
+                            </div>
+                            <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                                <ArrowRight className="w-6 h-6 text-indigo-400" />
+                            </div>
+                        </div>
+                    </button>
+                </div>
+            </Tooltip>
+
+            {/* 2. GitFlow Analyzer (Repo Intelligence) */}
+            <Tooltip content="Visualize & Debug Repository Architecture" position="left">
                 <div className="w-full flex items-center gap-4 group relative">
                     <button 
                         onClick={() => onNavigate(ViewMode.REPO_ANALYZER)}
@@ -49,77 +81,54 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                                 <GitBranch className="w-6 h-6" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-white group-hover:text-violet-200 transition-colors">GitFlow Analyzer</h3>
-                                <p className="text-xs text-slate-400 font-mono mt-1 group-hover:text-slate-300">Data Flow Diagram</p>
+                                <h3 className="text-xl font-bold text-white group-hover:text-violet-200 transition-colors">Repo Intelligence</h3>
+                                <p className="text-xs text-slate-400 font-mono mt-1 group-hover:text-slate-300">Architecture Mapping & D3 Graph</p>
                             </div>
                         </div>
                     </button>
                 </div>
             </Tooltip>
 
-            {/* Web Article Option */}
-            <Tooltip content="Summarize web content into infographics" position="left">
-                <div className="w-full flex items-center gap-4 group relative">
-                    <button 
-                        onClick={() => onNavigate(ViewMode.ARTICLE_INFOGRAPHIC)}
-                        className="w-full glass-panel p-5 rounded-2xl hover:bg-white/10 transition-all border border-white/5 hover:border-emerald-500/50 text-left group-hover:translate-x-1 group-hover:shadow-neon-emerald relative overflow-hidden"
-                    >
-                         <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <FileText className="w-24 h-24 -rotate-12" />
-                        </div>
-                        <div className="flex items-center gap-5 relative z-10">
-                            <div className="p-3.5 bg-emerald-500/20 rounded-xl text-emerald-300 border border-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                                <FileText className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-white group-hover:text-emerald-200 transition-colors">SiteSketch Tool</h3>
-                                <p className="text-xs text-slate-400 font-mono mt-1 group-hover:text-slate-300">Summary Infographic</p>
-                            </div>
-                        </div>
-                    </button>
-                </div>
-            </Tooltip>
-
-            {/* Code Generator Option */}
-            <Tooltip content="Generate source code from blueprints" position="left">
-                <div className="w-full flex items-center gap-4 group relative">
-                    <button 
-                        onClick={() => onNavigate(ViewMode.CODE_GENERATOR)}
-                        className="w-full glass-panel p-5 rounded-2xl hover:bg-white/10 transition-all border border-white/5 hover:border-indigo-500/50 text-left group-hover:translate-x-1 group-hover:shadow-neon-indigo relative overflow-hidden"
-                    >
-                         <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <Code2 className="w-24 h-24 -rotate-12" />
-                        </div>
-                        <div className="flex items-center gap-5 relative z-10">
-                            <div className="p-3.5 bg-indigo-500/20 rounded-xl text-indigo-300 border border-indigo-500/20 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
-                                <Code2 className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-white group-hover:text-indigo-200 transition-colors">Ink2Code Engine</h3>
-                                <p className="text-xs text-slate-400 font-mono mt-1 group-hover:text-slate-300">AI Code Generation</p>
-                            </div>
-                        </div>
-                    </button>
-                </div>
-            </Tooltip>
-
-            {/* Studio Prime Option */}
-            <Tooltip content="Advanced Multi-modal Chat & Generation" position="left">
+            {/* 3. Studio Prime (Advanced Logic) */}
+            <Tooltip content="Deep Reasoning & Multimodal Chat" position="left">
                 <div className="w-full flex items-center gap-4 group relative">
                     <button 
                         onClick={() => onNavigate(ViewMode.AI_STUDIO)}
                         className="w-full glass-panel p-5 rounded-2xl hover:bg-white/10 transition-all border border-white/5 hover:border-fuchsia-500/50 text-left group-hover:translate-x-1 group-hover:shadow-neon-fuchsia relative overflow-hidden"
                     >
                          <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <Sparkles className="w-24 h-24 -rotate-12" />
+                            <Cpu className="w-24 h-24 -rotate-12" />
                         </div>
                         <div className="flex items-center gap-5 relative z-10">
                             <div className="p-3.5 bg-fuchsia-500/20 rounded-xl text-fuchsia-300 border border-fuchsia-500/20 group-hover:bg-fuchsia-500 group-hover:text-white transition-colors">
-                                <Sparkles className="w-6 h-6" />
+                                <BrainCircuit className="w-6 h-6" />
                             </div>
                             <div>
                                 <h3 className="text-xl font-bold text-white group-hover:text-fuchsia-200 transition-colors">Studio Prime</h3>
-                                <p className="text-xs text-slate-400 font-mono mt-1 group-hover:text-slate-300">Multimodal Intelligence</p>
+                                <p className="text-xs text-slate-400 font-mono mt-1 group-hover:text-slate-300">Reasoning (Thinking Mode) & Vision</p>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+            </Tooltip>
+            
+            {/* 4. SiteSketch (Documentation/Research) */}
+            <Tooltip content="Convert Documentation/Articles to Visuals" position="left">
+                <div className="w-full flex items-center gap-4 group relative">
+                    <button 
+                        onClick={() => onNavigate(ViewMode.ARTICLE_INFOGRAPHIC)}
+                        className="w-full glass-panel p-4 rounded-2xl hover:bg-white/10 transition-all border border-white/5 hover:border-emerald-500/50 text-left group-hover:translate-x-1 relative overflow-hidden opacity-80 hover:opacity-100"
+                    >
+                         <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <FileText className="w-20 h-20 -rotate-12" />
+                        </div>
+                        <div className="flex items-center gap-5 relative z-10">
+                            <div className="p-3 bg-emerald-500/20 rounded-xl text-emerald-300 border border-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                                <FileText className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-white group-hover:text-emerald-200 transition-colors">DocuSketch</h3>
+                                <p className="text-xs text-slate-400 font-mono mt-1 group-hover:text-slate-300">Research & Documentation Summarizer</p>
                             </div>
                         </div>
                     </button>
@@ -128,20 +137,20 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* 3-Step Process Visualization */}
+      {/* 3-Step Process Visualization (Updated Text) */}
       <div className="relative pt-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 border-t border-white/5">
          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-4 relative pt-10">
              {/* Step 1 */}
              <div className="flex flex-col items-center text-center space-y-4 group">
-                 <div className="w-12 h-12 rounded-xl bg-slate-900/50 border border-white/10 flex items-center justify-center shadow-glass-lg group-hover:border-violet-500/50 transition-colors">
-                     <Link className="w-5 h-5 text-slate-300 group-hover:text-violet-300 transition-colors" />
+                 <div className="w-12 h-12 rounded-xl bg-slate-900/50 border border-white/10 flex items-center justify-center shadow-glass-lg group-hover:border-indigo-500/50 transition-colors">
+                     <Image className="w-5 h-5 text-slate-300 group-hover:text-indigo-300 transition-colors" />
                  </div>
                  <div>
                      <h3 className="text-white font-bold text-sm font-mono uppercase tracking-wider mb-1">
-                        1. Paste Link
+                        1. Input Context
                      </h3>
                      <p className="text-slate-500 text-xs leading-relaxed max-w-[200px] mx-auto">
-                        Use any public URL or repository identifier.
+                        Upload UI designs, Figma screenshots, or paste repo links.
                      </p>
                  </div>
              </div>
@@ -153,10 +162,10 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                  </div>
                  <div>
                      <h3 className="text-white font-bold text-sm font-mono uppercase tracking-wider mb-1">
-                        2. Analyze
+                        2. AI Engineering
                      </h3>
                      <p className="text-slate-500 text-xs leading-relaxed max-w-[200px] mx-auto">
-                        Advanced AI models map the logical structure.
+                        Gemini 3 Pro generates pixel-perfect code or analyzes logic.
                      </p>
                  </div>
              </div>
@@ -164,14 +173,14 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
              {/* Step 3 */}
              <div className="flex flex-col items-center text-center space-y-4 group">
                  <div className="w-12 h-12 rounded-xl bg-slate-900/50 border border-white/10 flex items-center justify-center shadow-glass-lg group-hover:border-emerald-500/50 transition-colors">
-                     <Image className="w-5 h-5 text-slate-300 group-hover:text-emerald-300 transition-colors" />
+                     <Code2 className="w-5 h-5 text-slate-300 group-hover:text-emerald-300 transition-colors" />
                  </div>
                  <div>
                      <h3 className="text-white font-bold text-sm font-mono uppercase tracking-wider mb-1">
-                        3. Visualize
+                        3. Deploy
                      </h3>
                      <p className="text-slate-500 text-xs leading-relaxed max-w-[200px] mx-auto">
-                        Get your infographics or production code.
+                        Get production-ready source code or architectural graphs.
                      </p>
                  </div>
              </div>
