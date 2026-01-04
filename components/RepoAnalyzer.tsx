@@ -8,11 +8,13 @@ import React, { useState } from 'react';
 import { fetchRepoFileTree } from '../services/githubService';
 import { generateInfographic, generateRepoGraphData } from '../services/geminiService';
 import { RepoFileTree, ViewMode, RepoHistoryItem, DevStudioState } from '../types';
-import { AlertCircle, Loader2, Layers, Box, Download, Sparkles, Command, Palette, Globe, Clock, Maximize, KeyRound, ShieldCheck, Cpu } from 'lucide-react';
+import { AlertCircle, Loader2, Layers, Box, Download, Sparkles, Command, Palette, Globe, Clock, Maximize, KeyRound, ShieldCheck, Cpu, GitBranch } from 'lucide-react';
 import { LoadingState } from './LoadingState';
+import { EmptyState } from './EmptyState';
 import ImageViewer from './ImageViewer';
 import Tooltip from './Tooltip';
 import { Section } from './Section';
+import { useApp } from '../contexts/AppContext';
 
 interface RepoAnalyzerProps {
   onNavigate: (mode: ViewMode, data?: any) => void;
@@ -50,12 +52,12 @@ const LANGUAGES = [
 ];
 
 const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate, history, onAddToHistory }) => {
+  const { showToast, triggerReKey } = useApp();
   const [repoInput, setRepoInput] = useState('');
   const [selectedStyle, setSelectedStyle] = useState(FLOW_STYLES[0].id);
   const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[0].value);
   const [customStyle, setCustomStyle] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [loadingStage, setLoadingStage] = useState<string>('');
   const [infographicData, setInfographicData] = useState<string | null>(null);
   const [infographic3DData, setInfographic3DData] = useState<string | null>(null);
@@ -79,41 +81,15 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate, history, onAddT
     return null;
   };
 
-  const addToHistory = (repoName: string, imageData: string, is3D: boolean, style: string) => {
-     const newItem: RepoHistoryItem = {
-         id: Date.now().toString(),
-         repoName,
-         imageData,
-         is3D,
-         style,
-         date: new Date()
-     };
-     onAddToHistory(newItem);
-  };
-
-  const handleApiError = (err: any) => {
-      if (err.message && err.message.includes("Requested entity was not found")) {
-          const confirmSwitch = window.confirm(
-              "BILLING REQUIRED: The current API key does not have access to these models.\n\n" +
-              "This feature requires a paid Google Cloud Project. Please switch to a valid paid API Key."
-          );
-          if (confirmSwitch) {
-              window.location.reload();
-          }
-      }
-      setError(err.message || 'An unexpected error occurred during analysis.');
-  }
-
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setInfographicData(null);
     setInfographic3DData(null);
     setCurrentFileTree(null);
 
     const repoDetails = parseRepoInput(repoInput);
     if (!repoDetails) {
-      setError('Invalid format. Use "owner/repo" or a full GitHub URL.');
+      showToast('Invalid format. Use "owner/repo" or a full GitHub URL.', 'error');
       return;
     }
 
@@ -134,13 +110,21 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate, history, onAddT
       
       if (infographicBase64) {
         setInfographicData(infographicBase64);
-        addToHistory(repoDetails.repo, infographicBase64, false, styleToUse);
+        onAddToHistory({
+             id: Date.now().toString(),
+             repoName: repoDetails.repo,
+             imageData: infographicBase64,
+             is3D: false,
+             style: styleToUse,
+             date: new Date()
+        });
+        showToast('Analysis complete!', 'success');
       } else {
           throw new Error("Failed to generate visual.");
       }
 
     } catch (err: any) {
-      handleApiError(err);
+      showToast(err.message || 'Analysis failed', 'error');
     } finally {
       setLoading(false);
       setLoadingStage('');
@@ -155,10 +139,18 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate, history, onAddT
       const data = await generateInfographic(currentRepoName, currentFileTree, styleToUse, true, selectedLanguage);
       if (data) {
           setInfographic3DData(data);
-          addToHistory(currentRepoName, data, true, styleToUse);
+          onAddToHistory({
+             id: Date.now().toString(),
+             repoName: currentRepoName,
+             imageData: data,
+             is3D: true,
+             style: styleToUse,
+             date: new Date()
+          });
+          showToast('3D Model generated successfully', 'success');
       }
     } catch (err: any) {
-      handleApiError(err);
+      showToast(err.message, 'error');
     } finally {
       setGenerating3D(false);
     }
@@ -178,7 +170,7 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate, history, onAddT
 
           onNavigate(ViewMode.DEV_STUDIO, devStudioData);
       } catch (err: any) {
-          handleApiError(err);
+          showToast(err.message, 'error');
       } finally {
           setGeneratingGraph(false);
       }
@@ -316,23 +308,6 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate, history, onAddT
         </div>
       </div>
 
-      {error && (
-        <div className="grid grid-cols-1 md:grid-cols-12">
-            <div className="md:col-start-4 md:col-span-6 p-4 glass-panel border-red-500/30 rounded-xl flex items-center gap-3 text-red-400 animate-in fade-in slide-in-from-top-2 font-mono text-sm">
-                <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-500" />
-                <p className="flex-1">{error}</p>
-                {error.includes("Required") && (
-                    <button 
-                        onClick={() => window.location.reload()}
-                        className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded text-xs font-bold transition-colors flex items-center gap-1"
-                    >
-                        <KeyRound className="w-3 h-3" /> SWITCH KEY
-                    </button>
-                )}
-            </div>
-        </div>
-      )}
-
       {loading && (
         <LoadingState message={loadingStage} type="repo" />
       )}
@@ -433,35 +408,41 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate, history, onAddT
         </div>
       )}
 
-      {/* History Section */}
-      {history.length > 0 && (
-          <div className="pt-12 border-t border-white/5 animate-in fade-in">
-              <div className="flex items-center gap-2 mb-6 text-slate-400">
-                  <Clock className="w-4 h-4" />
-                  <h3 className="text-sm font-mono uppercase tracking-wider">Recent Blueprints</h3>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* History Section - STRICT GRID: Mobile 1, Tablet+ 3 */}
+      <div className="pt-12 border-t border-white/5 animate-in fade-in">
+          <div className="flex items-center gap-2 mb-6 text-slate-400">
+              <Clock className="w-4 h-4" />
+              <h3 className="text-sm font-mono uppercase tracking-wider">Recent Blueprints</h3>
+          </div>
+          {history.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {history.map((item) => (
                       <button 
                         key={item.id}
                         onClick={() => loadFromHistory(item)}
-                        className="group bg-slate-900/50 border border-white/5 hover:border-violet-500/50 rounded-xl overflow-hidden text-left transition-all hover:shadow-neon-violet"
+                        className="group bg-slate-900/50 border border-white/5 hover:border-violet-500/50 rounded-xl overflow-hidden text-left transition-all hover:shadow-neon-violet aspect-video relative"
                       >
-                          <div className="aspect-video relative overflow-hidden bg-slate-950">
+                          <div className="absolute inset-0 bg-slate-950">
                               <img src={`data:image/png;base64,${item.imageData}`} alt={item.repoName} className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" />
                               {item.is3D && (
                                   <div className="absolute top-2 right-2 bg-fuchsia-500/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded border border-white/10">3D</div>
                               )}
                           </div>
-                          <div className="p-3">
+                          <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
                               <p className="text-xs font-bold text-white truncate font-mono">{item.repoName}</p>
-                              <p className="text-[10px] text-slate-500 mt-1">{item.style}</p>
+                              <p className="text-[10px] text-slate-300 mt-0.5">{item.style}</p>
                           </div>
                       </button>
                   ))}
               </div>
-          </div>
-      )}
+          ) : (
+              <EmptyState 
+                icon={GitBranch} 
+                title="No Blueprints Yet" 
+                description="Analyze a GitHub repository to generate your first architectural blueprint." 
+              />
+          )}
+      </div>
     </Section>
   );
 };

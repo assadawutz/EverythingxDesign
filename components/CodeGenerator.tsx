@@ -4,87 +4,54 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { generateCodeSnippet } from '../services/geminiService';
-import { Code2, Wand2, Loader2, Copy, Check, Terminal, FileCode, ImageIcon, X, Sparkles, BookOpen, ChevronRight, Layers, LayoutTemplate, Database, Monitor, Eye, Download, Clock, Smartphone, Tablet, Monitor as MonitorIcon, Play, Image as LucideImage } from 'lucide-react';
+import { 
+  Code2, Wand2, Loader2, Terminal, FileCode, ImageIcon, X, 
+  Sparkles, LayoutTemplate, Database, Monitor, 
+  Eye, Smartphone, Laptop, Monitor as MonitorIcon, Split, AlertTriangle, CheckCircle2, Check, RefreshCw
+} from 'lucide-react';
 import { Section } from './Section';
 import { CodeHistoryItem } from '../types';
 import Tooltip from './Tooltip';
 
 const LANGUAGES = [
-  "HTML/CSS Tailwind v3",
-  "Tailwind CSS v4 (Full Stack)",
-  "TypeScript (React)",
-  "JavaScript",
-  "Python (FastAPI)",
-  "Rust",
-  "Go",
-  "SQL",
-  "Bash Script"
+  "HTML/CSS Tailwind v4 (Stand-alone)",
+  "React + Tailwind v4 (Next.js 16)",
 ];
 
-const MODES = [
-    { id: 'ui', label: 'UI / Design', icon: Monitor, desc: "Pixel-perfect visual implementation" },
-    { id: 'logic', label: 'Logic / Backend', icon: Database, desc: "Functions, APIs, and Algorithms" }
-];
+const MODES = {
+  UI: 'UI_COMPONENT',
+  LOGIC: 'PAGE_LOGIC'
+};
 
-// Enhanced context with Asset Protocol
-const TAILWIND_V4_CONTEXT = `
-RULES FOR TAILWIND CSS v4 GENERATION:
-1. CSS-FIRST CONFIG: Use native CSS variables for theme values. Do NOT generate tailwind.config.js unless asked. Use @theme { --color-brand: #...; } inside the CSS file.
-2. NATIVE OPACITY: Use 'bg-blue-500/50' syntax which now uses CSS color-mix or relative colors.
-3. 3D TRANSFORMS: Use native 3D utilities: 'perspective-dramatic', 'rotate-x-12', 'transform-3d'.
-4. ASSET PROTOCOL (STRICT):
-   - IMAGES: NEVER use imaginary URLs like '/images/hero.jpg'. ALWAYS use 'https://placehold.co/{width}x{height}/EEE/31343C?text={Label}' (e.g., 'https://placehold.co/600x400/EEE/31343C?text=Hero+Image').
-   - ICONS: Use SVG icons directly inline or FontAwesome CDN if needed.
-   - AVATARS: Use 'https://i.pravatar.cc/150?img={1-70}' for user avatars.
+const GOLDEN_LAWS = `
+[SYSTEM: EVERYTHING x DESIGN v4.0 KERNEL]
+FRAMEWORK: Next.js 16 (App Router) + Tailwind CSS v4.
+
+1. ZERO-PX POLICY (STRICT):
+   - FORBIDDEN: px values for layout (width, height, padding, margin).
+   - ALLOWED: rem, em, %, viewport units (vw/vh).
+   - TAILWIND: Use standard classes (p-4, m-6, gap-4).
+   - TYPOGRAPHY: Must use clamp() or fluid variables. Ex: text-[clamp(1rem,2vw,1.5rem)].
+
+2. COMPONENT RESPONSIBILITY:
+   - IF MODE == UI_COMPONENT: Generate a PURE visual block. No margins on the outer container. width: 100%. Internal spacing only.
+   - IF MODE == PAGE_LOGIC: Assemble components using ContainerPage pattern. Handle Grid (grid-cols-12) and Section spacing here.
+
+3. TAILWIND v4 & THEME:
+   - Use project theme colors: 'bg-okmd-cyan', 'text-okmd-dark', 'bg-okmd-secondary'.
+   - Use 'size-10' instead of 'w-10 h-10'.
+   - Use 'perspective-dramatic' for 3D effects.
+
+4. ICONOGRAPHY (CRITICAL FOR PREVIEW):
+   - You MUST use FontAwesome classes (e.g., <i className="fa-solid fa-home"></i>) for icons inside the component.
+   - DO NOT import or use Lucide-React icons in the generated code, as they will not render in the preview iframe.
+
+5. ASSET INTELLIGENCE:
+   - Do not leave empty src="".
+   - Use: https://placehold.co/600x400/1B1D20/EEE?text=Description
 `;
-
-const UI_DESIGN_RULES = `
-[MODE: UI/DESIGN IMPLEMENTATION]
-You are an expert Front-end Engineer specialized in pixel-perfect implementation.
-
-ASSET HANDLING RULES (CRITICAL):
-1. IMAGES: Do NOT leave src="" empty. Do NOT use local paths.
-   - Use: https://placehold.co/600x400/png?text=Description for rectangular images.
-   - Use: https://placehold.co/100x100/png?text=Avatar for squares/circles.
-   - Try to estimate the real aspect ratio from the image description.
-2. LOGOS: If a logo is detected, use a stylized text span (e.g. <span class="font-bold text-2xl">Logo</span>) or a placeholder image.
-3. ICONS: Use simple SVG paths inline or assume FontAwesome is available.
-
-STRICT LAYOUT RULES:
-- Analyze layout, spacing, colors, and typography meticulously.
-- Use modern, responsive best practices (Grid/Flex).
-- Output pure, ready-to-run code.
-- If generating HTML, include <script src="https://cdn.tailwindcss.com"></script>.
-`;
-
-const EXAMPLE_PROMPTS = [
-  {
-    title: "Design to Code (UI)",
-    prompt: "Convert the attached UI design screenshot into a pixel-perfect, fully responsive website. \n\nRequirements:\n- Use semantic HTML5 and Tailwind CSS.\n- Match the colors, typography, spacing, and shadows exactly as seen in the image.\n- Ensure it is mobile-responsive.\n- Use FontAwesome or Lucide for icons where appropriate.",
-    lang: "HTML/CSS Tailwind v3",
-    mode: 'ui'
-  },
-  {
-    title: "v4 3D Card",
-    prompt: "Create a Tailwind v4 card component with 3D hover effects using 'perspective', 'rotate-x', and 'transform-3d'. Include a 'bg-linear-to-tr' gradient background.",
-    lang: "Tailwind CSS v4 (Full Stack)",
-    mode: 'ui'
-  },
-  {
-    title: "React + Tailwind",
-    prompt: "Create a React component for a responsive navigation bar with a glassmorphism effect, including a mobile drawer and active link states using Tailwind CSS.",
-    lang: "TypeScript (React)",
-    mode: 'ui'
-  },
-  {
-    title: "API Integration",
-    prompt: "Write a Python FastAPI endpoint that handles multi-part file uploads, validates image MIME types, and stores them in an S3 bucket with error handling.",
-    lang: "Python (FastAPI)",
-    mode: 'logic'
-  }
-];
 
 interface CodeGeneratorProps {
     history?: CodeHistoryItem[];
@@ -92,15 +59,24 @@ interface CodeGeneratorProps {
 }
 
 const CodeGenerator: React.FC<CodeGeneratorProps> = ({ history = [], onAddToHistory }) => {
+  const [activeMode, setActiveMode] = useState<string>(MODES.UI);
   const [prompt, setPrompt] = useState('');
-  const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[0]);
-  const [selectedMode, setSelectedMode] = useState('ui');
+  const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[1]); 
   const [loading, setLoading] = useState(false);
   const [generatedCode, setGeneratedCode] = useState('');
-  const [copied, setCopied] = useState(false);
   const [contextImage, setContextImage] = useState<{ data: string, mimeType: string, preview: string } | null>(null);
+  
   const [viewTab, setViewTab] = useState<'code' | 'preview'>('code');
-  const [previewWidth, setPreviewWidth] = useState<'100%' | '768px' | '375px'>('100%');
+  const [previewWidth, setPreviewWidth] = useState<'100%' | '1440px' | '768px' | '375px'>('100%');
+  const [compareMode, setCompareMode] = useState(false);
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  
+  const [checklist, setChecklist] = useState({
+      zeroPx: true,
+      mobileFirst: true,
+      tailwindV4: true
+  });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,28 +90,20 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ history = [], onAddToHist
           mimeType: file.type,
           preview: base64
         });
-        setSelectedMode('ui');
+        setActiveMode(MODES.UI);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const addToHistory = (code: string) => {
-      if (onAddToHistory) {
-          onAddToHistory({
-              id: Date.now().toString(),
-              prompt: prompt.substring(0, 100) + (prompt.length > 100 ? "..." : ""),
-              code,
-              language: selectedLanguage,
-              mode: selectedMode,
-              date: new Date()
-          });
-      }
-  };
-
-  const cleanCode = (code: string) => {
-      // Remove markdown code blocks if present
-      return code.replace(/^```[a-z]*\n?/, '').replace(/```$/, '');
+  const validateCode = (code: string) => {
+      const warnings: string[] = [];
+      if (/-\[\d+px\]/.test(code)) warnings.push("Detected hardcoded pixel values (e.g. w-[300px]). Violates Zero-PX Policy.");
+      if (code.includes("style={{")) warnings.push("Detected inline styles. Should use Tailwind classes.");
+      if (!code.includes("clamp(")) warnings.push("No fluid typography (clamp) detected.");
+      // We auto-fix lucide imports now, so no need to warn as aggressively, but still good to note.
+      if (code.includes("lucide-react")) warnings.push("Detected Lucide icons. Auto-mocking active for preview.");
+      setValidationWarnings(warnings);
   };
 
   const handleGenerate = async (e?: React.FormEvent) => {
@@ -144,477 +112,399 @@ const CodeGenerator: React.FC<CodeGeneratorProps> = ({ history = [], onAddToHist
 
     setLoading(true);
     setGeneratedCode('');
+    setValidationWarnings([]);
     setViewTab('code'); 
     
-    let systemContext = selectedLanguage.includes("v4") ? TAILWIND_V4_CONTEXT : undefined;
-
-    let finalPrompt = prompt;
-    if (selectedMode === 'ui') {
-        finalPrompt = `${UI_DESIGN_RULES}\n\nTASK: ${prompt}`;
+    let taskContext = "";
+    if (activeMode === MODES.UI) {
+        taskContext = `
+        TASK: Create a UI COMPONENT based on the user request.
+        CONTEXT: This is a standalone building block.
+        REQUIREMENTS:
+        - Must correspond to the uploaded image (if any).
+        - Use <section> or <div> as root.
+        - NO global layout constraints (container/margin) on root.
+        - Ensure text contrast is accessible (assume white background for preview).
+        `;
     } else {
-        finalPrompt = `[MODE: BACKEND/LOGIC]\nYou are a Senior Software Architect.\n\nTASK: ${prompt}\n\nSTRICT RULES:\n- Focus on performance, security, and error handling.\n- Write clean, commented, and efficient code.\n- Follow standard design patterns for the selected language.`;
+        taskContext = `
+        TASK: Create a PAGE LAYOUT / LOGIC layer.
+        CONTEXT: Assemble the structure.
+        REQUIREMENTS:
+        - Implement Grid System (grid-cols-1 md:grid-cols-12).
+        - Handle Data Fetching mockups.
+        - Use 'ContainerPage' wrapper pattern (simulated div class="max-w-[1440px] mx-auto fluid-px").
+        `;
     }
-    if (contextImage) finalPrompt = `[VISUAL REFERENCE ATTACHED]\n${finalPrompt}`;
+
+    const fullPrompt = `
+    ${GOLDEN_LAWS}
+    
+    ${taskContext}
+
+    USER REQUEST: ${prompt}
+    
+    ${checklist.zeroPx ? "ENFORCEMENT: STRICT ZERO-PX POLICY." : ""}
+    ${checklist.mobileFirst ? "ENFORCEMENT: MOBILE-FIRST RESPONSIVE DESIGN." : ""}
+    `;
 
     try {
       const rawCode = await generateCodeSnippet(
-          finalPrompt, 
+          fullPrompt, 
           selectedLanguage, 
-          contextImage ? { data: contextImage.data, mimeType: contextImage.mimeType } : undefined,
-          systemContext
+          contextImage ? { data: contextImage.data, mimeType: contextImage.mimeType } : undefined
       );
       
-      const cleanedCode = cleanCode(rawCode);
+      const cleanedCode = rawCode.replace(/^```[a-z]*\n?/, '').replace(/```$/, '');
       setGeneratedCode(cleanedCode);
-      addToHistory(cleanedCode);
+      validateCode(cleanedCode);
       
-      // Auto-switch to preview if it looks like HTML
-      if (cleanedCode.includes('<html') || cleanedCode.includes('<!DOCTYPE') || selectedLanguage.includes('HTML')) {
+      if (onAddToHistory) {
+          onAddToHistory({
+              id: Date.now().toString(),
+              prompt: prompt.substring(0, 100),
+              code: cleanedCode,
+              language: selectedLanguage,
+              mode: activeMode,
+              date: new Date()
+          });
+      }
+      
+      if (cleanedCode.includes('<') || activeMode === MODES.UI) {
           setViewTab('preview');
       }
 
     } catch (err: any) {
-      const errorMessage = err.message || JSON.stringify(err);
-      setGeneratedCode(`// Error generating code: ${errorMessage}\n\n// Troubleshooting:\n// 1. Ensure you have selected a valid PAID API key.\n// 2. Click the 'Select API Key' button in the top right header to re-authenticate.`);
+      setGeneratedCode(`// Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const applyExample = (ex: typeof EXAMPLE_PROMPTS[0]) => {
-    setPrompt(ex.prompt);
-    setSelectedLanguage(ex.lang);
-    setSelectedMode(ex.mode);
-  };
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(generatedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleDownload = () => {
-      if (!generatedCode) return;
-      const blob = new Blob([generatedCode], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `ink2code-export-${Date.now()}.html`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-  };
-
-  const openInStackBlitz = () => {
-    if (!generatedCode) return;
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = 'https://stackblitz.com/run?file=index.html';
-    form.target = '_blank';
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'project[files][index.html]';
-    
-    // Ensure the code has the Tailwind CDN
-    let codeToExport = generatedCode;
-    if (!codeToExport.includes('cdn.tailwindcss.com') && (codeToExport.includes('<html') || selectedLanguage.includes('HTML'))) {
-        if (!codeToExport.includes('<html')) {
-             codeToExport = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ink2Code Project</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
-</head>
-<body class="bg-gray-50 p-4">
-${codeToExport}
-</body>
-</html>`;
-        } else {
-             if (!codeToExport.includes('cdn.tailwindcss.com')) {
-                 codeToExport = codeToExport.replace('<head>', '<head><script src="https://cdn.tailwindcss.com"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>');
-             }
-        }
-    }
-    
-    input.value = codeToExport;
-    const titleInput = document.createElement('input');
-    titleInput.type = 'hidden';
-    titleInput.name = 'project[title]';
-    titleInput.value = 'Ink2Code Project';
-    const templateInput = document.createElement('input');
-    templateInput.type = 'hidden';
-    templateInput.name = 'project[template]';
-    templateInput.value = 'html';
-    form.appendChild(input);
-    form.appendChild(titleInput);
-    form.appendChild(templateInput);
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
-  };
-
-  const loadFromHistory = (item: CodeHistoryItem) => {
-      setGeneratedCode(item.code);
-      setPrompt(item.prompt);
-      setSelectedLanguage(item.language);
-      if (item.mode) setSelectedMode(item.mode);
-      setViewTab('code');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Helper to construct a renderable HTML document for preview with AUTO-FIX Scripts
-  const getPreviewSrc = () => {
+  // Memoized Preview Source to prevent regeneration on resize
+  const previewSrc = useMemo(() => {
       if (!generatedCode) return '';
-      
-      let codeToRender = generatedCode;
-      
-      // Auto-Fix Script: Replaces broken images with a pretty placeholder SVG
-      const assetFallbackScript = `
+      let code = generatedCode;
+      const isReact = code.includes('import React') || code.includes('export default');
+
+      const tailwindConfig = `
         <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                const images = document.querySelectorAll('img');
-                images.forEach(img => {
-                    img.onerror = function() {
-                        this.onerror = null;
-                        // Replace with a generated SVG placeholder
-                        const width = this.width || 300;
-                        const height = this.height || 200;
-                        this.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '"%3E%3Crect fill="%23e2e8f0" width="100%25" height="100%25"/%3E%3Ctext fill="%2394a3b8" x="50%25" y="50%25" font-family="sans-serif" font-size="14" text-anchor="middle" dy=".3em"%3EImage Asset%3C/text%3E%3C/svg%3E';
-                        this.classList.add('opacity-80');
-                    };
-                    // Force check if src is empty or local
-                    if (!img.src || img.src === window.location.href) {
-                         img.onerror();
-                    }
-                });
-            });
+          window.onerror = function(message, source, lineno, colno, error) {
+             document.body.innerHTML = '<div style="color:#ef4444; padding:20px; font-family:monospace; background:#fee2e2; border-bottom:1px solid #fecaca;"><strong>Runtime Error:</strong> ' + message + '</div>';
+          };
+          tailwind.config = {
+            theme: {
+              extend: {
+                colors: {
+                   'okmd-cyan': '#16A7CB',
+                   'okmd-secondary': '#74CEE2',
+                   'okmd-dark': '#1B1D20',
+                },
+                fontFamily: {
+                   sans: ['Kanit', 'sans-serif'],
+                   mono: ['JetBrains Mono', 'monospace'],
+                }
+              }
+            }
+          }
         </script>
       `;
 
-      if (!codeToRender.includes('<body') && !codeToRender.includes('<html')) {
-             codeToRender = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <script src="https://cdn.tailwindcss.com"></script>
-                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-                    <style>body { background-color: transparent; padding: 20px; }</style>
-                </head>
-                <body>
-                    ${codeToRender}
-                    ${assetFallbackScript}
-                </body>
-                </html>
-              `;
+      const header = `
+        <script src="https://cdn.tailwindcss.com"></script>
+        ${tailwindConfig}
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+          html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+          body { font-family: "Kanit", sans-serif; background: #ffffff; color: #1B1D20; overflow-x: hidden; overflow-y: auto; }
+          #root { min-height: 100vh; display: flex; flex-direction: column; }
+        </style>
+      `;
+
+      if (isReact) {
+          let cleanCode = code;
+
+          // Auto-Mock Lucide Icons to prevent ReferenceErrors in browser preview
+          cleanCode = cleanCode.replace(/import\s+\{\s*([^}]+)\s*\}\s+from\s+['"]lucide-react['"];?/g, (match, imports) => {
+              const icons = imports.split(',').map((i: string) => i.trim());
+              // Create a dummy component for each icon using FontAwesome as fallback or just a placeholder
+              return icons.map((icon: string) => `const ${icon} = (props) => React.createElement('i', { className: 'fa-solid fa-shapes text-indigo-400', title: '${icon}', style: { fontStyle: 'normal' }, ...props });`).join('\n');
+          });
+
+          // Strip other imports
+          cleanCode = cleanCode
+              .replace(/import\s+.*?;/g, '')
+              .replace(/export default function\s+(\w+)/, 'const App = function $1')
+              .replace(/export default\s+(\w+)/, 'const App = $1');
+
+          return `
+            <!DOCTYPE html>
+            <html>
+              <head>
+                ${header}
+                <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+                <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+                <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+              </head>
+              <body>
+                <div id="root"></div>
+                <script type="text/babel">
+                  const props = {};
+                  ${cleanCode}
+                  
+                  const rootElement = document.getElementById('root');
+                  if (!rootElement) throw new Error("Root element missing");
+                  
+                  const root = ReactDOM.createRoot(rootElement);
+                  try {
+                    root.render(<App />);
+                  } catch (e) {
+                    document.body.innerHTML = '<div style="color:red; padding:20px; font-family:monospace;"><h3>Render Error</h3>' + e.message + '</div>';
+                  }
+                </script>
+              </body>
+            </html>
+          `;
       } else {
-          if (!codeToRender.includes('cdn.tailwindcss.com')) {
-              codeToRender = codeToRender.replace('<head>', '<head><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">');
-          }
-          if (codeToRender.includes('</body>')) {
-              codeToRender = codeToRender.replace('</body>', `${assetFallbackScript}</body>`);
+          if (!code.includes('<html')) {
+              return `<!DOCTYPE html><html><head>${header}</head><body>${code}</body></html>`;
           } else {
-              codeToRender += assetFallbackScript;
+              return code.replace('<head>', `<head>${header}`);
           }
       }
-      return codeToRender;
-  };
-
-  const isPreviewable = selectedLanguage.includes('HTML') || selectedLanguage.includes('Tailwind') || selectedLanguage.includes('JavaScript') || selectedLanguage.includes('TypeScript');
+  }, [generatedCode]);
 
   return (
-    <Section className="space-y-10 mb-20 animate-in fade-in duration-700">
-      <div className="text-center max-w-3xl mx-auto space-y-6">
-        <h2 className="text-5xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-blue-200 via-indigo-200 to-slate-500 font-sans">
-          Ink<span className="text-indigo-400">2Code</span>.
+    <Section className="space-y-8 mb-20 animate-in fade-in duration-700">
+      <div className="text-center max-w-3xl mx-auto space-y-4">
+        <h2 className="text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-white to-indigo-300 font-sans">
+          Everything <span className="text-indigo-400">x</span> Design
         </h2>
-        <p className="text-slate-400 text-lg font-light tracking-wide">
-          Production-grade code generation with intelligent asset handling.
-        </p>
+        <div className="flex items-center justify-center gap-4 text-xs font-mono text-slate-500">
+             <span className="flex items-center gap-1"><Monitor className="w-3 h-3" /> UI_COMPOSER</span>
+             <span className="w-px h-3 bg-white/10" />
+             <span className="flex items-center gap-1"><Database className="w-3 h-3" /> LOGIC_KERNEL</span>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-        {/* Left Pane: Input & Examples */}
-        <div className="lg:col-span-5 space-y-6">
-          <form onSubmit={handleGenerate} className="glass-panel rounded-3xl p-6 md:p-8 space-y-6 flex flex-col h-full">
-            
-            {/* Mode Switcher */}
-            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-900/50 rounded-xl border border-white/5">
-                {MODES.map(mode => (
-                    <button
-                        key={mode.id}
-                        type="button"
-                        onClick={() => setSelectedMode(mode.id)}
-                        className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-mono font-bold transition-all ${selectedMode === mode.id ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-                    >
-                        <mode.icon className="w-3.5 h-3.5" />
-                        {mode.label}
-                    </button>
-                ))}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch h-[calc(100vh-14rem)] min-h-[700px]">
+        <div className="lg:col-span-5 flex flex-col gap-6">
+            <div className="grid grid-cols-2 p-1 bg-slate-900/50 rounded-xl border border-white/5">
+                <button onClick={() => setActiveMode(MODES.UI)} className={`flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-mono font-bold transition-all ${activeMode === MODES.UI ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                    <LayoutTemplate className="w-4 h-4" /> UI BLOCK
+                </button>
+                <button onClick={() => setActiveMode(MODES.LOGIC)} className={`flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-mono font-bold transition-all ${activeMode === MODES.LOGIC ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                    <Database className="w-4 h-4" /> PAGE LOGIC
+                </button>
             </div>
 
-            <div className="space-y-4 flex-1">
-              <label className="text-xs text-indigo-400 font-mono tracking-wider flex items-center justify-between">
-                <span className="flex items-center gap-2 uppercase"><Terminal className="w-4 h-4" /> Spec_Input</span>
-                <span className="text-[10px] text-slate-500 font-normal normal-case opacity-70">
-                    {selectedMode === 'ui' ? "Describe layout & style" : "Describe functionality & logic"}
-                </span>
-              </label>
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder={selectedMode === 'ui' ? "Ex: Convert this attached screenshot into a React component..." : "Ex: Write a sorting algorithm for..."}
-                className="w-full h-48 bg-slate-950/50 border border-white/10 rounded-2xl p-5 text-slate-200 placeholder:text-slate-700 focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 font-mono text-sm leading-relaxed transition-all resize-none custom-scrollbar"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Stack / Language</label>
-                <div className="relative">
-                  <select
-                    value={selectedLanguage}
-                    onChange={(e) => setSelectedLanguage(e.target.value)}
-                    className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-slate-300 font-mono appearance-none cursor-pointer hover:bg-white/5 transition-colors pr-8"
-                  >
-                    {LANGUAGES.map(lang => (
-                      <option key={lang} value={lang} className="bg-slate-900">{lang}</option>
-                    ))}
-                  </select>
-                  <ChevronRight className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Visual Reference</label>
-                {contextImage ? (
-                  <div className="relative group">
-                    <div className="w-full h-[41px] bg-indigo-500/10 border border-indigo-500/30 rounded-xl flex items-center px-3 gap-2 overflow-hidden">
-                       <img src={contextImage.preview} className="w-6 h-6 object-cover rounded" />
-                       <span className="text-[10px] font-mono text-indigo-300 truncate">Design Attached</span>
-                       <button 
-                        type="button" 
-                        onClick={() => setContextImage(null)}
-                        className="ml-auto text-indigo-300 hover:text-white"
-                       >
-                         <X className="w-4 h-4" />
-                       </button>
+            <form onSubmit={handleGenerate} className="flex-1 glass-panel rounded-3xl p-6 flex flex-col gap-6 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none -z-10" />
+                <div className="space-y-3 p-4 bg-slate-950/30 rounded-xl border border-white/5">
+                    <div className="flex items-center gap-2 text-[10px] font-bold font-mono uppercase tracking-widest text-emerald-400 mb-2">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Golden Laws
                     </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`w-full h-[41px] bg-slate-900/50 border border-white/10 hover:border-indigo-500/50 rounded-xl flex items-center justify-center gap-2 transition-all font-mono text-[10px] ${selectedMode === 'ui' ? 'text-indigo-400 border-indigo-500/30' : 'text-slate-500 hover:text-indigo-400'}`}
-                  >
-                    <ImageIcon className="w-4 h-4" /> {selectedMode === 'ui' ? "UPLOAD_DESIGN" : "ATTACH_REF"}
-                  </button>
-                )}
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-              </div>
-            </div>
+                    <div className="space-y-2">
+                        <label className="flex items-center gap-3 text-xs text-slate-300 cursor-pointer group">
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${checklist.zeroPx ? 'bg-indigo-500 border-indigo-500' : 'border-slate-600'}`}>
+                                {checklist.zeroPx && <Check className="w-3 h-3 text-white" />}
+                            </div>
+                            <input type="checkbox" checked={checklist.zeroPx} onChange={e => setChecklist(p => ({...p, zeroPx: e.target.checked}))} className="hidden" />
+                            <span className="group-hover:text-white transition-colors">Strict Zero-PX Policy</span>
+                        </label>
+                        <label className="flex items-center gap-3 text-xs text-slate-300 cursor-pointer group">
+                             <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${checklist.mobileFirst ? 'bg-indigo-500 border-indigo-500' : 'border-slate-600'}`}>
+                                {checklist.mobileFirst && <Check className="w-3 h-3 text-white" />}
+                            </div>
+                            <input type="checkbox" checked={checklist.mobileFirst} onChange={e => setChecklist(p => ({...p, mobileFirst: e.target.checked}))} className="hidden" />
+                            <span className="group-hover:text-white transition-colors">Mobile-First Response</span>
+                        </label>
+                    </div>
+                </div>
 
-            <button
-              type="submit"
-              disabled={loading || !prompt.trim()}
-              className="w-full py-4 bg-indigo-500/10 hover:bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 rounded-2xl font-bold transition-all flex items-center justify-center gap-3 font-mono tracking-widest disabled:opacity-50 hover:shadow-neon-indigo"
-            >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Wand2 className="w-5 h-5" />}
-              {loading ? "INITIALIZING_ENGINE..." : "GENERATE_SOURCE"}
-            </button>
-            
-            {/* Asset Status Indicator */}
-            <div className="flex items-center justify-center gap-2 text-[10px] text-emerald-500/70 font-mono uppercase tracking-wider">
-               <LucideImage className="w-3 h-3" /> Smart Asset Pipeline Active
-            </div>
-          </form>
+                <div className="space-y-2 flex-1 flex flex-col">
+                    <div className="flex justify-between items-center">
+                        <label className="text-xs text-indigo-400 font-mono tracking-wider flex items-center gap-2">
+                            <Terminal className="w-4 h-4" /> 
+                            {activeMode === MODES.UI ? "VISUAL_SPEC" : "LOGIC_FLOW"}
+                        </label>
+                        {contextImage && (
+                            <button type="button" onClick={() => setContextImage(null)} className="text-[10px] text-red-400 hover:text-red-300 flex items-center gap-1">
+                                <X className="w-3 h-3" /> Clear Image
+                            </button>
+                        )}
+                    </div>
 
-          {/* Examples Card */}
-          <div className="glass-panel rounded-3xl p-6 space-y-4">
-             <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 uppercase tracking-widest">
-                <BookOpen className="w-3.5 h-3.5" /> Quick_Patterns
-             </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {EXAMPLE_PROMPTS.map((ex, idx) => (
-                   <button 
-                    key={idx}
-                    onClick={() => applyExample(ex)}
-                    className="p-3 text-left rounded-xl bg-white/5 hover:bg-indigo-500/10 border border-white/5 hover:border-indigo-500/30 transition-all group relative overflow-hidden"
-                   >
-                      {(ex.lang.includes("v4") || ex.title.includes("Design")) && (
-                          <div className="absolute top-0 right-0 p-1.5 opacity-10 group-hover:opacity-20">
-                              {ex.title.includes("Design") ? <LayoutTemplate className="w-8 h-8 -rotate-12" /> : <Layers className="w-8 h-8 -rotate-12" />}
-                          </div>
-                      )}
-                      <p className="text-[11px] font-bold text-slate-300 group-hover:text-indigo-200 mb-1 flex items-center gap-2">
-                          {ex.title}
-                          {ex.lang.includes("v4") && <span className="text-[8px] bg-indigo-500/30 px-1 rounded">v4</span>}
-                          {ex.title.includes("Design") && <span className="text-[8px] bg-emerald-500/30 px-1 rounded text-emerald-200">IMG</span>}
-                      </p>
-                      <p className="text-[10px] text-slate-500 line-clamp-2 leading-tight">{ex.prompt}</p>
-                   </button>
-                ))}
-             </div>
-          </div>
+                    <div className="relative flex-1">
+                        <textarea
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            placeholder={activeMode === MODES.UI 
+                                ? "Describe the UI component. Upload an image for best results..." 
+                                : "Describe the page structure, grid layout, and data requirements..."}
+                            className="w-full h-full bg-slate-950/50 border border-white/10 rounded-xl p-4 text-sm text-slate-200 placeholder:text-slate-600 focus:ring-1 focus:ring-indigo-500/50 resize-none font-mono custom-scrollbar"
+                        />
+                        {contextImage && (
+                            <div className="absolute bottom-4 right-4 w-16 h-16 rounded-lg border border-indigo-500/50 overflow-hidden shadow-lg group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                                <img src={contextImage.preview} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <ImageIcon className="w-4 h-4 text-white" />
+                                </div>
+                            </div>
+                        )}
+                        {!contextImage && (
+                            <button 
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                className="absolute bottom-4 right-4 p-2 bg-slate-800 hover:bg-indigo-500 text-slate-400 hover:text-white rounded-lg transition-colors shadow-lg border border-white/10"
+                                title="Attach Design Reference"
+                            >
+                                <ImageIcon className="w-4 h-4" />
+                            </button>
+                        )}
+                        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                    </div>
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={loading || !prompt.trim()}
+                    className={`w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-3 font-mono tracking-widest disabled:opacity-50 shadow-lg ${
+                        activeMode === MODES.UI 
+                        ? 'bg-indigo-500 hover:bg-indigo-400 text-white shadow-neon-indigo' 
+                        : 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-neon-emerald'
+                    }`}
+                >
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Wand2 className="w-5 h-5" />}
+                    {loading ? "ASSEMBLING..." : "GENERATE_CODE"}
+                </button>
+            </form>
         </div>
 
-        {/* Right Pane: Output */}
-        <div className="lg:col-span-7 glass-panel rounded-3xl overflow-hidden flex flex-col bg-slate-950/30 border border-white/5 shadow-2xl h-[calc(100vh-12rem)] min-h-[600px]">
-          <div className="px-6 py-4 border-b border-white/5 flex flex-wrap items-center justify-between bg-slate-950/50 gap-4">
-            <div className="flex items-center gap-4">
-                {/* View Tabs */}
-                <div className="flex p-1 bg-slate-900 rounded-lg border border-white/10">
-                    <button 
-                        onClick={() => setViewTab('code')}
-                        className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold transition-all flex items-center gap-2 ${viewTab === 'code' ? 'bg-indigo-500 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-                    >
+        <div className="lg:col-span-7 flex flex-col gap-0 glass-panel rounded-3xl overflow-hidden h-full">
+            <div className="px-4 py-2 border-b border-white/5 bg-slate-950/30 flex items-center justify-between shrink-0">
+                <div className="flex gap-1 bg-slate-900/80 p-1 rounded-lg border border-white/5">
+                    <button onClick={() => setViewTab('code')} className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold flex items-center gap-2 transition-all ${viewTab === 'code' ? 'bg-indigo-500 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
                         <FileCode className="w-3.5 h-3.5" /> Source
                     </button>
-                    <button 
-                        onClick={() => setViewTab('preview')}
-                        disabled={!generatedCode || !isPreviewable}
-                        className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold transition-all flex items-center gap-2 ${viewTab === 'preview' ? 'bg-emerald-500 text-white' : 'text-slate-500 hover:text-slate-300 disabled:opacity-50'}`}
-                    >
+                    <button onClick={() => setViewTab('preview')} className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold flex items-center gap-2 transition-all ${viewTab === 'preview' ? 'bg-emerald-500 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
                         <Eye className="w-3.5 h-3.5" /> Preview
                     </button>
                 </div>
-            </div>
 
-            {/* Preview Controls (Visible only in Preview Mode) */}
-            {viewTab === 'preview' && (
-                <div className="flex items-center gap-2 bg-slate-900/50 p-1 rounded-lg border border-white/10">
-                    <Tooltip content="Mobile (375px)">
-                        <button onClick={() => setPreviewWidth('375px')} className={`p-1.5 rounded hover:bg-white/10 ${previewWidth === '375px' ? 'text-white bg-white/10' : 'text-slate-500'}`}>
-                            <Smartphone className="w-4 h-4" />
+                {viewTab === 'preview' && (
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-lg border border-white/5">
+                             <Tooltip content="Mobile (375px)">
+                                <button onClick={() => setPreviewWidth('375px')} className={`p-1.5 rounded hover:bg-white/10 ${previewWidth === '375px' ? 'text-white bg-white/10' : 'text-slate-500'}`}>
+                                    <Smartphone className="w-4 h-4" />
+                                </button>
+                            </Tooltip>
+                             <Tooltip content="Desktop (1440px)">
+                                <button onClick={() => setPreviewWidth('1440px')} className={`p-1.5 rounded hover:bg-white/10 ${previewWidth === '1440px' ? 'text-white bg-white/10' : 'text-slate-500'}`}>
+                                    <MonitorIcon className="w-4 h-4" />
+                                </button>
+                            </Tooltip>
+                            <Tooltip content="Full Width">
+                                <button onClick={() => setPreviewWidth('100%')} className={`p-1.5 rounded hover:bg-white/10 ${previewWidth === '100%' ? 'text-white bg-white/10' : 'text-slate-500'}`}>
+                                    <Laptop className="w-4 h-4" />
+                                </button>
+                            </Tooltip>
+                        </div>
+                        
+                        <button onClick={() => setGeneratedCode(c => c + ' ')} className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg transition-colors border border-white/5" title="Force Refresh">
+                            <RefreshCw className="w-3.5 h-3.5" />
                         </button>
-                    </Tooltip>
-                    <Tooltip content="Tablet (768px)">
-                        <button onClick={() => setPreviewWidth('768px')} className={`p-1.5 rounded hover:bg-white/10 ${previewWidth === '768px' ? 'text-white bg-white/10' : 'text-slate-500'}`}>
-                            <Tablet className="w-4 h-4" />
-                        </button>
-                    </Tooltip>
-                     <Tooltip content="Desktop (100%)">
-                        <button onClick={() => setPreviewWidth('100%')} className={`p-1.5 rounded hover:bg-white/10 ${previewWidth === '100%' ? 'text-white bg-white/10' : 'text-slate-500'}`}>
-                            <MonitorIcon className="w-4 h-4" />
-                        </button>
-                    </Tooltip>
-                </div>
-            )}
 
-            <div className="flex items-center gap-2">
-                {generatedCode && (
-                <>
-                    <button
-                        onClick={openInStackBlitz}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 hover:text-indigo-200 text-xs font-mono transition-all border border-indigo-500/20 hover:border-indigo-500/40"
-                    >
-                        <Play className="w-3.5 h-3.5" />
-                        RUN_STACKBLITZ
-                    </button>
-                    <button
-                        onClick={handleDownload}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-mono transition-all text-slate-300 border border-white/5 hover:border-white/20"
-                    >
-                        <Download className="w-3.5 h-3.5" />
-                        SAVE
-                    </button>
-                    <div className="w-px h-4 bg-white/10 mx-1"></div>
-                    <button
-                        onClick={copyToClipboard}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-mono transition-all text-slate-300"
-                    >
-                        {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                        {copied ? "COPIED" : "COPY"}
-                    </button>
-                </>
+                        {contextImage && (
+                            <button onClick={() => setCompareMode(!compareMode)} className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-2 border transition-all ${compareMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-slate-900/80 border-white/5 text-slate-500'}`}>
+                                <Split className="w-3.5 h-3.5" /> Compare
+                            </button>
+                        )}
+                    </div>
                 )}
             </div>
-          </div>
-          
-          <div className="flex-1 relative bg-slate-900/50 flex flex-col overflow-hidden">
-             {loading ? (
-               <div className="absolute inset-0 flex flex-col items-center justify-center text-indigo-500/30 space-y-4 z-20 bg-slate-950/80 backdrop-blur-sm">
-                  <div className="relative">
-                    <Loader2 className="w-12 h-12 animate-spin" />
-                    <Sparkles className="w-4 h-4 absolute -top-1 -right-1 animate-pulse" />
-                  </div>
-                  <p className="animate-pulse tracking-widest text-[10px] uppercase">Compiling Logic...</p>
-                  {contextImage && (
-                      <p className="text-[9px] text-emerald-400/70 font-mono">Scanning UI Topology...</p>
-                  )}
-               </div>
-             ) : generatedCode ? (
-                viewTab === 'preview' ? (
-                     <div className="w-full h-full bg-slate-900 flex justify-center items-start overflow-auto p-4 relative">
-                         <div className="absolute top-2 right-2 z-10 bg-black/50 text-white/50 px-2 py-1 rounded text-[10px] font-mono pointer-events-none backdrop-blur-md">Live Preview</div>
-                         <div 
-                            className="bg-white shadow-2xl transition-all duration-300 ease-in-out border border-slate-700" 
-                            style={{ width: previewWidth, height: '100%', minHeight: '500px' }}
-                         >
-                            <iframe 
-                                srcDoc={getPreviewSrc()}
-                                className="w-full h-full border-none"
-                                title="Code Preview"
-                                sandbox="allow-scripts"
-                            />
-                         </div>
-                     </div>
-                ) : (
-                    <div className="w-full h-full relative group">
-                        <textarea
-                            value={generatedCode}
-                            onChange={(e) => setGeneratedCode(e.target.value)}
-                            spellCheck={false}
-                            className="w-full h-full bg-[#0d1117] text-slate-300 font-mono text-xs leading-relaxed p-6 resize-none outline-none border-none custom-scrollbar selection:bg-indigo-500/30 focus:ring-0"
-                            style={{ fontFamily: '"JetBrains Mono", monospace' }}
-                        />
-                         <div className="absolute bottom-4 right-4 bg-slate-800/80 backdrop-blur text-slate-500 text-[10px] px-3 py-1 rounded-full border border-white/5 pointer-events-none group-hover:opacity-100 opacity-50 transition-opacity">
-                            Editable Source
+
+            <div className={`flex-1 relative overflow-hidden flex flex-col ${viewTab === 'preview' ? 'bg-white' : 'bg-[#0d1117]'}`}>
+                {loading ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-950/90 backdrop-blur-sm">
+                        <div className="relative">
+                            <Loader2 className="w-12 h-12 animate-spin text-indigo-500" />
+                            <Sparkles className="w-5 h-5 absolute -top-2 -right-2 text-emerald-400 animate-bounce" />
                         </div>
+                        <p className="mt-4 font-mono text-xs text-indigo-300 animate-pulse tracking-widest">
+                            {activeMode === MODES.UI ? "COMPOSING PIXELS..." : "ASSEMBLING LOGIC..."}
+                        </p>
                     </div>
-                )
-             ) : (
-               <div className="h-full flex flex-col items-center justify-center text-slate-700 opacity-40 space-y-4">
-                 <Code2 className="w-16 h-16" />
-                 <p className="text-[10px] tracking-widest uppercase">Awaiting requirements</p>
-               </div>
-             )}
-          </div>
+                ) : generatedCode ? (
+                    viewTab === 'preview' ? (
+                        <div className="w-full h-full flex flex-col overflow-hidden bg-white">
+                             <div className="flex-1 flex overflow-hidden justify-center bg-slate-100">
+                                {compareMode && contextImage && (
+                                    <div className="flex-1 border-r border-slate-200 bg-white relative overflow-auto p-4 flex items-center justify-center">
+                                        <div className="absolute top-2 left-2 px-2 py-1 bg-black/50 rounded text-[10px] font-mono text-white z-10">Original</div>
+                                        <img src={contextImage.preview} className="max-w-full max-h-full object-contain shadow-lg" />
+                                    </div>
+                                )}
+                                <div className={`overflow-auto flex flex-col items-center bg-gray-50/50 transition-all duration-300 ${compareMode ? 'flex-1' : 'w-full'}`}>
+                                    <div 
+                                        className="bg-white shadow-2xl transition-[width] duration-300 ease-in-out h-full min-h-full border-x border-slate-200"
+                                        style={{ width: previewWidth }}
+                                    >
+                                        <iframe 
+                                            srcDoc={previewSrc}
+                                            className="w-full h-full border-none block"
+                                            title="Preview"
+                                            sandbox="allow-scripts"
+                                        />
+                                    </div>
+                                </div>
+                             </div>
+                        </div>
+                    ) : (
+                        <div className="w-full h-full relative group">
+                            <textarea
+                                value={generatedCode}
+                                readOnly
+                                className="w-full h-full bg-[#0d1117] text-slate-300 font-mono text-xs leading-relaxed p-6 resize-none outline-none border-none custom-scrollbar"
+                                style={{ fontFamily: '"JetBrains Mono", monospace' }}
+                            />
+                            {validationWarnings.length > 0 && (
+                                <div className="absolute bottom-4 left-4 right-4 bg-slate-900/90 border border-red-500/30 rounded-xl p-3 backdrop-blur-md animate-in slide-in-from-bottom-2 z-10">
+                                    <div className="flex items-start gap-3">
+                                        <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+                                        <div>
+                                            <p className="text-xs font-bold text-red-200 font-mono mb-1">Validation Warnings</p>
+                                            <ul className="text-[10px] text-red-200/70 list-disc list-inside space-y-0.5">
+                                                {validationWarnings.map((w, i) => <li key={i}>{w}</li>)}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )
+                ) : (
+                    <div className={`h-full flex flex-col items-center justify-center space-y-4 ${viewTab === 'preview' ? 'hidden' : 'text-slate-700 opacity-40'}`}>
+                        <Code2 className="w-20 h-20" />
+                        <p className="text-xs tracking-widest uppercase font-mono">Ready to Engineer</p>
+                    </div>
+                )}
+            </div>
+            
+            <div className="px-4 py-2 bg-slate-950 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-500">
+                 <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    System Online
+                 </div>
+                 <div>
+                    Target: Next.js 16 / Tailwind v4
+                 </div>
+            </div>
+
         </div>
       </div>
-
-      {/* History Section */}
-      {history.length > 0 && (
-          <div className="pt-12 border-t border-white/5 animate-in fade-in">
-              <div className="flex items-center gap-2 mb-6 text-slate-400">
-                  <Clock className="w-4 h-4" />
-                  <h3 className="text-sm font-mono uppercase tracking-wider">Recent Generators</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {history.map((item) => (
-                      <button 
-                        key={item.id}
-                        onClick={() => loadFromHistory(item)}
-                        className="group bg-slate-900/50 border border-white/5 hover:border-indigo-500/50 rounded-xl overflow-hidden text-left transition-all hover:shadow-neon-indigo p-4 flex flex-col gap-2"
-                      >
-                          <div className="flex items-center justify-between w-full">
-                              <span className="text-[10px] font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">{item.language}</span>
-                              <span className="text-[10px] text-slate-500">{new Date(item.date).toLocaleDateString()}</span>
-                          </div>
-                          <p className="text-xs text-slate-300 font-medium line-clamp-2">{item.prompt}</p>
-                          <div className="mt-auto pt-2 border-t border-white/5 flex items-center gap-1 text-[10px] text-slate-500 group-hover:text-indigo-300 transition-colors">
-                              <Terminal className="w-3 h-3" /> Restore Session
-                          </div>
-                      </button>
-                  ))}
-              </div>
-          </div>
-      )}
     </Section>
   );
 };

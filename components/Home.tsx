@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { ViewMode } from '../types';
-import { GitBranch, FileText, BrainCircuit, Image, ArrowRight, Code2, Layers, Cpu, Terminal } from 'lucide-react';
+import { GitBranch, FileText, BrainCircuit, Image, ArrowRight, Code2, Layers, Cpu, Terminal, Calendar } from 'lucide-react';
 import Tooltip from './Tooltip';
 import { Section } from './Section';
 
@@ -24,22 +24,22 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
         <div className="md:col-start-2 md:col-span-10 lg:col-start-3 lg:col-span-8 text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-okmd-cyan/10 border border-okmd-cyan/20 text-sm font-mono text-okmd-secondary mb-2">
               <Terminal className="w-4 h-4" />
-              <span>v2.0: Dev-First Engine Active</span>
+              <span>v4.0: Next.js + Tailwind v4 Active</span>
           </div>
           
           <h1 className="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-indigo-100 to-slate-500 leading-tight" style={{ fontSize: 'var(--font-size-h1)' }}>
-            Link 2 <span className="text-okmd-cyan">Code</span>
+            Everything <span className="text-okmd-cyan">x</span> Design
           </h1>
           
           <p className="text-slate-400 text-xl font-light leading-relaxed">
-            The autonomous engineering platform. Convert <span className="text-white font-medium">Designs to Code</span>, map repository architecture, and ship faster.
+            The autonomous engineering platform. Transform <span className="text-white font-medium">Any Concept</span> into <span className="text-white font-medium">Production Reality</span>.
           </p>
         </div>
 
         {/* Action Stack */}
         <div className="md:col-start-2 md:col-span-10 lg:col-start-3 lg:col-span-8 flex flex-col gap-6 pt-8">
             
-            {/* 1. Ink2Code */}
+            {/* 1. Everything x Design Engine */}
             <Tooltip content="Upload Figma/Screenshots -> Get React/Tailwind Code" position="left">
                 <button 
                     onClick={() => onNavigate(ViewMode.CODE_GENERATOR)}
@@ -53,11 +53,11 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                             <Code2 className="w-8 h-8" />
                         </div>
                         <div>
-                            <h3 className="text-2xl font-bold text-white group-hover:text-indigo-200 transition-colors">Ink2Code Engine</h3>
+                            <h3 className="text-2xl font-bold text-white group-hover:text-indigo-200 transition-colors">Everything x Design Engine</h3>
                             <p className="text-sm text-slate-400 font-mono mt-1 group-hover:text-slate-300 flex items-center gap-2">
                                 <span className="text-emerald-400">●</span> Design to Code
                                 <span className="text-slate-600">|</span>
-                                <span>UI Scaffold</span>
+                                <span>Zero-PX Scaffold</span>
                             </p>
                         </div>
                         <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
@@ -82,7 +82,7 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                         </div>
                         <div>
                             <h3 className="text-xl font-bold text-white group-hover:text-violet-200 transition-colors">Repo Intelligence</h3>
-                            <p className="text-xs text-slate-400 font-mono mt-1 group-hover:text-slate-300">Architecture Mapping & D3 Graph</p>
+                            <p className="text-xs text-slate-400 font-mono mt-1 group-hover:text-slate-300">Architecture Mapping</p>
                         </div>
                     </div>
                 </button>

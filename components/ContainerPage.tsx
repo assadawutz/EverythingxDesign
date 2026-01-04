@@ -13,9 +13,9 @@ interface ContainerPageProps {
 
 export const ContainerPage: React.FC<ContainerPageProps> = ({ children, className = '' }) => {
   return (
-    // Max width 1440px (standard large screen)
-    // Padding is handled by fluid-px class derived from --spacing-container-px
-    <div className={`w-full max-w-[1440px] mx-auto fluid-px ${className}`}>
+    // STRICT RULE: Use .container class from globals.css which handles 
+    // breakpoint logic and padding overrides !important
+    <div className={`container ${className}`}>
       {children}
     </div>
   );

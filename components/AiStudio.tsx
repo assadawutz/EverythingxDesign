@@ -10,7 +10,8 @@ import {
   Sparkles, Send, ImageIcon, Video, Camera, Image as LucideImage, 
   Settings, Zap, BrainCircuit, Loader2, Download, Maximize, X, 
   MessageSquare, FileText, ChevronRight, Wand2, Terminal, ShieldCheck,
-  Pin, PinOff, UploadCloud, FileUp, GripHorizontal, Palette, Film, FilePlus
+  Pin, PinOff, UploadCloud, FileUp, GripHorizontal, Palette, Film, FilePlus,
+  ArrowUp
 } from 'lucide-react';
 import Tooltip from './Tooltip';
 import ImageViewer from './ImageViewer';
@@ -253,9 +254,12 @@ const AiStudio: React.FC = () => {
         <p className="text-slate-400 font-light tracking-wide">Advanced multimodal lab powered by Nano Banana Pro.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Navigation / Control Sidebar */}
-        <div className="lg:col-span-3 space-y-6">
+      {/* MASTER LAYOUT RULE: SideMenu Structure */}
+      {/* Grid: 1 col (mobile) -> 12 cols (desktop) | Gap: 10 */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-10 items-start">
+        
+        {/* LEFT: Sidebar (md:col-span-3) */}
+        <aside className="md:col-span-3 space-y-6">
           <div className="glass-panel rounded-2xl p-2 space-y-1">
             <button 
               onClick={() => setTab('chat')}
@@ -360,10 +364,10 @@ const AiStudio: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
+        </aside>
 
-        {/* Main Interface Area */}
-        <div className="lg:col-span-9 space-y-6">
+        {/* RIGHT: Main Content (md:col-span-9) */}
+        <main className="md:col-span-9 space-y-6">
           <div className="glass-panel rounded-3xl h-[600px] flex flex-col overflow-hidden">
              {/* Header */}
              <div className="px-6 py-4 bg-slate-950/50 border-b border-white/5 flex items-center justify-between">
@@ -460,25 +464,35 @@ const AiStudio: React.FC = () => {
 
              {/* Input Bar */}
              <div 
-                className={`p-6 bg-slate-950/80 border-t border-white/5 space-y-4 transition-all duration-300 relative ${isDragging ? 'bg-indigo-500/10 border-indigo-500/50' : ''}`}
+                className={`p-6 bg-slate-950/80 border-t border-white/5 space-y-4 transition-all duration-300 relative group/dropzone ${
+                    isDragging 
+                    ? 'bg-indigo-500/10 border-indigo-500/50 shadow-[inset_0_0_20px_rgba(99,102,241,0.2)]' 
+                    : 'hover:bg-slate-900/80'
+                }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
             >
-                {/* Visual Drag Overlay */}
+                {/* Visual Drag Overlay - Enhanced */}
                 {isDragging && tab === 'chat' && (
-                    <div className="absolute inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center border-2 border-dashed border-indigo-500 rounded-b-3xl">
-                        <div className="flex flex-col items-center gap-6 animate-bounce">
-                            <div className="p-6 bg-indigo-500/20 rounded-full shadow-neon-indigo">
-                                <UploadCloud className="w-16 h-16 text-indigo-300" />
+                    <div className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center rounded-xl border-2 border-dashed border-indigo-400 m-2 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex flex-col items-center gap-4 animate-bounce">
+                            <div className="p-4 bg-indigo-500/20 rounded-full shadow-[0_0_30px_rgba(99,102,241,0.4)]">
+                                <UploadCloud className="w-10 h-10 text-indigo-300" />
                             </div>
-                            <div className="space-y-2 text-center">
-                                <p className="text-xl font-bold text-white tracking-wide">Drop Media Here</p>
-                                <div className="flex items-center gap-3 justify-center text-sm text-indigo-300 font-mono">
-                                    <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded"><ImageIcon className="w-4 h-4" /> Images</span>
-                                    <span className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded"><Film className="w-4 h-4" /> Videos</span>
-                                </div>
+                            <div className="space-y-1 text-center">
+                                <p className="text-lg font-bold text-white tracking-wide font-sans">Release to Drop</p>
+                                <p className="text-xs text-indigo-300 font-mono">Supports Images & Videos</p>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Passive Drop Hint (visible when not dragging files, but hovering input area) */}
+                {!isDragging && files.length === 0 && (
+                    <div className="absolute top-0 right-0 p-2 opacity-0 group-hover/dropzone:opacity-30 transition-opacity pointer-events-none">
+                        <div className="flex items-center gap-1 text-[9px] font-mono text-indigo-400 uppercase tracking-widest">
+                            <ArrowUp className="w-3 h-3" /> Drag & Drop Supported
                         </div>
                     </div>
                 )}
@@ -541,7 +555,7 @@ const AiStudio: React.FC = () => {
                       <textarea 
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
-                        placeholder={tab === 'generate' ? "Describe the image you want to create..." : "Ask anything, drag & drop images, video, or design screenshots..."}
+                        placeholder={tab === 'generate' ? "Describe the image you want to create..." : "Ask anything..."}
                         className="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-5 py-4 text-sm text-slate-200 placeholder:text-slate-600 focus:ring-1 focus:ring-indigo-500/50 resize-none h-[56px] min-h-[56px] custom-scrollbar group-hover:border-white/20 transition-colors"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
@@ -562,6 +576,14 @@ const AiStudio: React.FC = () => {
                          </Tooltip>
                          <input ref={fileInputRef} type="file" className="hidden" accept="image/*,video/*" multiple onChange={handleFileUpload} />
                       </div>
+                      
+                      {/* Empty State / Type Hints */}
+                      {tab === 'chat' && !prompt && files.length === 0 && (
+                          <div className="absolute left-5 top-14 pointer-events-none opacity-40 group-focus-within:opacity-0 transition-opacity hidden sm:flex gap-3">
+                              <span className="text-[10px] font-mono flex items-center gap-1"><ImageIcon className="w-3 h-3" /> Images</span>
+                              <span className="text-[10px] font-mono flex items-center gap-1"><Film className="w-3 h-3" /> Videos</span>
+                          </div>
+                      )}
                    </div>
                    <div className="flex flex-col gap-2">
                       <button 
@@ -586,7 +608,7 @@ const AiStudio: React.FC = () => {
                 </form>
              </div>
           </div>
-        </div>
+        </main>
       </div>
     </Section>
   );

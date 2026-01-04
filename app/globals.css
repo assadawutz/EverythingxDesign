@@ -1,15 +1,44 @@
 
 @import "tailwindcss";
 
-@theme {
-  /* Colors */
-  --color-okmd-cyan: #16A7CB;
-  --color-okmd-secondary: #74CEE2;
-  --color-okmd-dark: #1B1D20;
-
-  /* Fonts */
-  --font-sans: "Kanit", sans-serif;
+:root {
+  /* OKMD Color Palette - Source of Truth */
+  --color-primary-cyan: #16A7CB;
+  --color-secondary-cyan: #74CEE2;
+  --color-dark: #1B1D20;
+  
+  /* FLUID SCALING LOGIC (ZERO-PX POLICY) */
+  /* Mobile 375px -> Desktop 1440px interpolation */
+  --spacing-section-py: clamp(3rem, 6vw, 5rem);
+  --spacing-container-px: clamp(1.5rem, 5vw, 3rem);
+  
+  /* Fluid Typography */
+  --font-size-h1: clamp(2.5rem, 6vw, 4.5rem);
+  --font-size-h2: clamp(2rem, 5vw, 3.5rem);
+  --font-size-body: clamp(1rem, 1.2vw, 1.125rem);
+  
+  --font-kanit: "Kanit", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
+}
+
+@theme {
+  /* Colors mapped to variables */
+  --color-okmd-cyan: var(--color-primary-cyan);
+  --color-okmd-secondary: var(--color-secondary-cyan);
+  --color-okmd-dark: var(--color-dark);
+  
+  /* Spacing mapped to fluid variables */
+  --spacing-section-py: var(--spacing-section-py);
+  --spacing-container-px: var(--spacing-container-px);
+  
+  /* Typography mapped to fluid variables */
+  --text-fluid-h1: var(--font-size-h1);
+  --text-fluid-h2: var(--font-size-h2);
+  --text-fluid-body: var(--font-size-body);
+  
+  /* Fonts */
+  --font-sans: var(--font-kanit);
+  --font-mono: var(--font-mono);
 
   /* Shadows */
   --shadow-glass-inset: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
@@ -36,29 +65,15 @@
   }
 }
 
-:root {
-  /* Fluid Scaling Variables */
-  --spacing-section-py: clamp(3rem, 6vw, 5rem);
-  
-  /* Fluid Typography Variables */
-  --font-size-h1: clamp(2.5rem, 6vw, 4.5rem);
-  --font-size-h2: clamp(2rem, 5vw, 3.5rem);
-  --font-size-body: clamp(1rem, 1.2vw, 1.125rem);
-  
-  --bg-color: #020617;
-  --text-color: #e2e8f0;
-}
-
 @layer base {
   html { 
-    font-family: var(--font-sans); 
+    font-family: var(--font-kanit); 
     font-size: 16px; 
     scroll-behavior: smooth;
   }
   
   body {
-    font-family: var(--font-sans);
-    background-color: var(--bg-color);
+    background-color: #020617; /* Fallback */
     background-image: 
       radial-gradient(at 0% 0%, rgba(22, 167, 203, 0.08) 0px, transparent 50%),
       radial-gradient(at 100% 0%, rgba(116, 206, 226, 0.05) 0px, transparent 50%),
@@ -66,44 +81,10 @@
       linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
     background-attachment: fixed;
-    color: var(--text-color);
+    color: #e2e8f0;
     -webkit-font-smoothing: antialiased;
   }
-
-  /* STRICT CONTAINER LOGIC FROM MASTER INSTRUCTIONS */
-  .container {
-      max-width: 1280px !important;
-      width: 100% !important;
-      margin-left: auto !important;
-      margin-right: auto !important;
-      padding-left: 1rem !important;
-      padding-right: 1rem !important;
-  }
-
-  @media (min-width: 1024px) {
-      .container {
-          padding-left: 4rem !important;
-          padding-right: 4rem !important;
-      }
-  }
-
-  @media (min-width: 1280px) {
-      .container {
-          padding-left: 5rem !important;
-          padding-right: 5rem !important;
-      }
-  }
-
-  @media (min-width: 1440px) {
-      .container {
-          max-width: 1440px !important; /* Cap width */
-          padding-left: 6rem !important;
-          padding-right: 6rem !important;
-      }
-  }
 }
-
-/* Utilities (Tailwind v4 Syntax) */
 
 @utility btn-interaction {
   @apply transition-all duration-300 ease-out active:scale-[0.98] hover:brightness-110 cursor-pointer hover:shadow-lg;
@@ -111,6 +92,11 @@
 
 @utility card-interaction {
   @apply transition-all duration-500 ease-out group-hover:scale-[1.02] group-hover:-translate-y-1 cursor-pointer;
+}
+
+@utility fluid-px {
+  padding-left: var(--spacing-container-px);
+  padding-right: var(--spacing-container-px);
 }
 
 @utility fluid-py {
@@ -128,8 +114,8 @@
     0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
-/* Custom Scrollbars */
 @layer components {
+  /* Custom Scrollbar Styles */
   .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
   .custom-scrollbar::-webkit-scrollbar-track { background: rgba(2, 6, 23, 0.3); }
   .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }

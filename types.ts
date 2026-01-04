@@ -50,6 +50,10 @@ export interface DevStudioState {
 export interface Citation {
     uri: string;
     title: string;
+    url: string;
+    imageData: string;
+    citations: Citation[];
+    date: Date;
 }
 
 export interface RepoHistoryItem {

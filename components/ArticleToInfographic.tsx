@@ -7,10 +7,12 @@
 import React, { useState } from 'react';
 import { generateArticleInfographic } from '../services/geminiService';
 import { Citation, ArticleHistoryItem } from '../types';
-import { Link, Loader2, Download, Sparkles, AlertCircle, Palette, Globe, ExternalLink, BookOpen, Clock, Maximize, ChevronDown, Check } from 'lucide-react';
+import { Link, Loader2, Download, Sparkles, AlertCircle, Palette, Globe, ExternalLink, BookOpen, Clock, Maximize, ChevronDown, Check, FileText } from 'lucide-react';
 import { LoadingState } from './LoadingState';
+import { EmptyState } from './EmptyState';
 import ImageViewer from './ImageViewer';
 import { Section } from './Section';
+import { useApp } from '../contexts/AppContext';
 
 interface ArticleToInfographicProps {
     history: ArticleHistoryItem[];
@@ -50,6 +52,7 @@ const LANGUAGES = [
 const EXPORT_FORMATS = ["PNG", "JPG", "SVG"];
 
 const ArticleToInfographic: React.FC<ArticleToInfographicProps> = ({ history, onAddToHistory }) => {
+  const { showToast } = useApp();
   const [urlInput, setUrlInput] = useState('');
   const [selectedStyle, setSelectedStyle] = useState(SKETCH_STYLES[0]);
   const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[0].value);
@@ -91,14 +94,14 @@ const ArticleToInfographic: React.FC<ArticleToInfographicProps> = ({ history, on
     setError(null);
 
     if (!urlInput.trim()) {
-        setError("Please provide a valid URL.");
+        showToast("Please provide a valid URL.", "error");
         return;
     }
 
     try {
         new URL(urlInput);
     } catch (err) {
-        setError("Please provide a valid URL starting with http:// or https://");
+        showToast("Please provide a valid URL starting with http:// or https://", "error");
         return;
     }
     
@@ -117,11 +120,13 @@ const ArticleToInfographic: React.FC<ArticleToInfographicProps> = ({ history, on
           setImageData(resultImage);
           setCitations(resultCitations);
           addToHistory(urlInput, resultImage, resultCitations);
+          showToast('Infographic generated successfully!', 'success');
       } else {
           throw new Error("Failed to generate infographic image. The URL might be inaccessible.");
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
+      showToast(err.message || "Generation failed", 'error');
     } finally {
       setLoading(false);
       setLoadingStage('');
@@ -168,11 +173,6 @@ const ArticleToInfographic: React.FC<ArticleToInfographicProps> = ({ history, on
            };
            img.src = `data:image/png;base64,${imageData}`;
       }
-  };
-
-  const renderStylePreview = (style: string) => {
-     // Simplified for brevity, same as previous logic
-     return <div className="absolute inset-0 bg-slate-800"></div>;
   };
 
   return (
@@ -442,32 +442,38 @@ const ArticleToInfographic: React.FC<ArticleToInfographicProps> = ({ history, on
         </div>
       )}
       
-      {/* History Section */}
-      {history.length > 0 && (
-          <div className="pt-12 border-t border-white/5 animate-in fade-in">
-              <div className="flex items-center gap-2 mb-6 text-slate-400">
-                  <Clock className="w-4 h-4" />
-                  <h3 className="text-sm font-mono uppercase tracking-wider">Recent Sketches</h3>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* History Section - STRICT GRID: Mobile 1, Tablet+ 3 */}
+      <div className="pt-12 border-t border-white/5 animate-in fade-in">
+          <div className="flex items-center gap-2 mb-6 text-slate-400">
+              <Clock className="w-4 h-4" />
+              <h3 className="text-sm font-mono uppercase tracking-wider">Recent Sketches</h3>
+          </div>
+          {history.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {history.map((item) => (
                       <button 
                         key={item.id}
                         onClick={() => loadFromHistory(item)}
-                        className="group bg-slate-900/50 border border-white/5 hover:border-emerald-500/50 rounded-xl overflow-hidden text-left transition-all hover:shadow-neon-emerald"
+                        className="group bg-slate-900/50 border border-white/5 hover:border-emerald-500/50 rounded-xl overflow-hidden text-left transition-all hover:shadow-neon-emerald aspect-video relative"
                       >
-                          <div className="aspect-video relative overflow-hidden bg-slate-950">
+                          <div className="absolute inset-0 bg-slate-950">
                               <img src={`data:image/png;base64,${item.imageData}`} alt={item.title} className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" />
                           </div>
-                          <div className="p-3">
+                          <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
                               <p className="text-xs font-bold text-white truncate font-mono">{item.title}</p>
-                              <p className="text-[10px] text-slate-500 mt-1 truncate">{new URL(item.url).hostname}</p>
+                              <p className="text-[10px] text-slate-300 mt-0.5 truncate">{new URL(item.url).hostname}</p>
                           </div>
                       </button>
                   ))}
               </div>
-          </div>
-      )}
+          ) : (
+             <EmptyState 
+                icon={FileText} 
+                title="No Sketches Created" 
+                description="Paste a URL above to generate your first visual summary." 
+              />
+          )}
+      </div>
     </Section>
   );
 };

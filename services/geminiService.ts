@@ -11,11 +11,28 @@ import { RepoFileTree, Citation, DataFlowGraph } from '../types';
  * Helper to ensure we always get the freshest key from the environment.
  */
 const getAiClient = () => {
+  // Check for API Key strictly
   const apiKey = (process.env.API_KEY || "").trim();
   if (!apiKey) {
-    throw new Error("API_KEY is not configured. Please ensure a paid API key is selected.");
+    throw new Error("MISSING_KEY: API_KEY is not configured. Please click the key icon to select a paid API key.");
   }
   return new GoogleGenAI({ apiKey });
+};
+
+const handleGeminiError = (error: any): never => {
+    console.error("Gemini API Error:", error);
+    let msg = error.message || "Unknown error occurred";
+    
+    if (msg.includes("403") || msg.includes("permission denied")) {
+        throw new Error("PERMISSION_DENIED: The API Key is invalid or lacks permissions. Please Re-Key.");
+    }
+    if (msg.includes("429") || msg.includes("quota")) {
+        throw new Error("QUOTA_EXCEEDED: API rate limit reached. Please try again later.");
+    }
+    if (msg.includes("Requested entity was not found")) {
+        throw new Error("BILLING_REQUIRED: This model requires a Paid Tier API Key. Please switch keys.");
+    }
+    throw new Error(`AI_ERROR: ${msg}`);
 };
 
 export interface InfographicResult {
@@ -33,23 +50,23 @@ export async function generateInfographic(
   is3D: boolean = false,
   language: string = "English"
 ): Promise<string | null> {
-  const ai = getAiClient();
-  const limitedTree = fileTree.slice(0, 150).map(f => f.path).join(', ');
-  
-  let styleGuidelines = "";
-  if (is3D) {
-      styleGuidelines = "VISUAL STYLE: Photorealistic Miniature Diorama, 3D printed model on executive desk, isometric view, tilt-shift.";
-  } else {
-      styleGuidelines = `VISUAL STYLE: ${style}. 2D flat diagrammatic view.`;
-  }
-
-  const prompt = `Create a detailed technical data flow diagram infographic for GitHub repository: "${repoName}".
-  STYLE: ${styleGuidelines}
-  Text Language: ${language}.
-  Context: ${limitedTree}...
-  Structure: Input -> Processing -> Output.`;
-
   try {
+      const ai = getAiClient();
+      const limitedTree = fileTree.slice(0, 150).map(f => f.path).join(', ');
+      
+      let styleGuidelines = "";
+      if (is3D) {
+          styleGuidelines = "VISUAL STYLE: Photorealistic Miniature Diorama, 3D printed model on executive desk, isometric view, tilt-shift.";
+      } else {
+          styleGuidelines = `VISUAL STYLE: ${style}. 2D flat diagrammatic view.`;
+      }
+
+      const prompt = `Create a detailed technical data flow diagram infographic for GitHub repository: "${repoName}".
+      STYLE: ${styleGuidelines}
+      Text Language: ${language}.
+      Context: ${limitedTree}...
+      Structure: Input -> Processing -> Output.`;
+
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-image-preview',
       contents: { parts: [{ text: prompt }] },
@@ -66,8 +83,7 @@ export async function generateInfographic(
     }
     return null;
   } catch (error) {
-    console.error("Infographic generation failed:", error);
-    throw error;
+    handleGeminiError(error);
   }
 }
 
@@ -78,61 +94,60 @@ export async function generateRepoGraphData(
   repoName: string,
   fileTree: RepoFileTree[]
 ): Promise<DataFlowGraph> {
-  const ai = getAiClient();
-  const limitedTree = fileTree.slice(0, 200).map(f => f.path).join('\n');
-
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Analyze this file tree for repo "${repoName}". 
-      Generate a Dependency Graph JSON.
-      - Nodes should represent key files/modules. Group them by folder (0-9).
-      - Links should represent imports/calls.
-      - "id" must be the file path.
-      - "label" is the filename.
-      Files:
-      ${limitedTree}`,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            nodes: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  id: { type: Type.STRING },
-                  group: { type: Type.INTEGER },
-                  label: { type: Type.STRING }
-                },
-                required: ["id", "group", "label"]
-              }
-            },
-            links: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  source: { type: Type.STRING },
-                  target: { type: Type.STRING },
-                  value: { type: Type.INTEGER }
-                },
-                required: ["source", "target", "value"]
+      const ai = getAiClient();
+      const limitedTree = fileTree.slice(0, 200).map(f => f.path).join('\n');
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `Analyze this file tree for repo "${repoName}". 
+        Generate a Dependency Graph JSON.
+        - Nodes should represent key files/modules. Group them by folder (0-9).
+        - Links should represent imports/calls.
+        - "id" must be the file path.
+        - "label" is the filename.
+        Files:
+        ${limitedTree}`,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              nodes: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    id: { type: Type.STRING },
+                    group: { type: Type.INTEGER },
+                    label: { type: Type.STRING }
+                  },
+                  required: ["id", "group", "label"]
+                }
+              },
+              links: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    source: { type: Type.STRING },
+                    target: { type: Type.STRING },
+                    value: { type: Type.INTEGER }
+                  },
+                  required: ["source", "target", "value"]
+                }
               }
             }
           }
         }
-      }
-    });
+      });
 
-    if (response.text) {
-      return JSON.parse(response.text) as DataFlowGraph;
-    }
-    throw new Error("Empty response from model");
+      if (response.text) {
+        return JSON.parse(response.text) as DataFlowGraph;
+      }
+      throw new Error("Empty response from model");
   } catch (error) {
-    console.error("Graph data generation failed:", error);
-    throw error;
+      handleGeminiError(error);
   }
 }
 
@@ -145,14 +160,14 @@ export async function generateStudioImage(
   imageSize: string,
   style?: string
 ): Promise<string | null> {
-  const ai = getAiClient();
-  
-  let finalPrompt = prompt;
-  if (style && style !== 'None') {
-    finalPrompt = `${prompt} . Visual Style: ${style}. High quality, detailed.`;
-  }
-
   try {
+      const ai = getAiClient();
+      
+      let finalPrompt = prompt;
+      if (style && style !== 'None') {
+        finalPrompt = `${prompt} . Visual Style: ${style}. High quality, detailed.`;
+      }
+
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-image-preview',
       contents: { parts: [{ text: finalPrompt }] },
@@ -172,8 +187,7 @@ export async function generateStudioImage(
     }
     return null;
   } catch (error) {
-    console.error("Studio image generation failed:", error);
-    throw error;
+      handleGeminiError(error);
   }
 }
 
@@ -186,14 +200,14 @@ export async function multimodalChat(
   files: { data: string; mimeType: string }[],
   useThinking: boolean = true
 ): Promise<string> {
-  const ai = getAiClient();
-  
-  const currentParts: any[] = files.map(f => ({
-    inlineData: { data: f.data, mimeType: f.mimeType }
-  }));
-  currentParts.push({ text: prompt });
-
   try {
+      const ai = getAiClient();
+      
+      const currentParts: any[] = files.map(f => ({
+        inlineData: { data: f.data, mimeType: f.mimeType }
+      }));
+      currentParts.push({ text: prompt });
+
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: [
@@ -207,8 +221,7 @@ export async function multimodalChat(
 
     return response.text || "No response received.";
   } catch (error) {
-    console.error("Multimodal chat failed:", error);
-    throw error;
+      handleGeminiError(error);
   }
 }
 
@@ -216,16 +229,15 @@ export async function multimodalChat(
  * Low-latency response using Flash Lite.
  */
 export async function getQuickResponse(prompt: string): Promise<string> {
-  const ai = getAiClient();
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-flash-lite-latest',
-      contents: prompt,
-    });
-    return response.text || "No response.";
+      const ai = getAiClient();
+      const response = await ai.models.generateContent({
+        model: 'gemini-flash-lite-latest',
+        contents: prompt,
+      });
+      return response.text || "No response.";
   } catch (error) {
-    console.error("Quick response failed:", error);
-    throw error;
+      handleGeminiError(error);
   }
 }
 
@@ -234,18 +246,18 @@ export async function askNodeSpecificQuestion(
   question: string, 
   fileTree: RepoFileTree[]
 ): Promise<string> {
-  const ai = getAiClient();
-  const limitedTree = fileTree.slice(0, 300).map(f => f.path).join('\n');
-  const prompt = `Node: "${nodeLabel}". Tree:\n${limitedTree}\nQuestion: "${question}"`;
   try {
-    const response = await ai.models.generateContent({
-       model: 'gemini-3-pro-preview',
-       contents: prompt
-    });
-    return response.text || "No answer generated.";
+      const ai = getAiClient();
+      const limitedTree = fileTree.slice(0, 300).map(f => f.path).join('\n');
+      const prompt = `Node: "${nodeLabel}". Tree:\n${limitedTree}\nQuestion: "${question}"`;
+      
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-pro-preview',
+        contents: prompt
+      });
+      return response.text || "No answer generated.";
   } catch (error) {
-    console.error("Node Q&A failed:", error);
-    throw error;
+      handleGeminiError(error);
   }
 }
 
@@ -255,30 +267,31 @@ export async function generateArticleInfographic(
   onProgress?: (stage: string) => void,
   language: string = "English"
 ): Promise<InfographicResult> {
-    const ai = getAiClient();
-    if (onProgress) onProgress("RESEARCHING CONTENT...");
-    
-    let structuralSummary = "";
-    let citations: Citation[] = [];
-
     try {
-        const analysisResponse = await ai.models.generateContent({
-            model: 'gemini-3-pro-preview',
-            contents: `Analyze ${url} for an infographic in ${language}.`,
-            config: { tools: [{ googleSearch: {} }] }
-        });
-        structuralSummary = analysisResponse.text || "";
-        const chunks = analysisResponse.candidates?.[0]?.groundingMetadata?.groundingChunks;
-        if (chunks) {
-            citations = chunks.map((c: any) => ({ uri: c.web?.uri, title: c.web?.title })).filter((c: any) => c.uri);
+        const ai = getAiClient();
+        if (onProgress) onProgress("RESEARCHING CONTENT...");
+        
+        let structuralSummary = "";
+        let citations: Citation[] = [];
+
+        try {
+            const analysisResponse = await ai.models.generateContent({
+                model: 'gemini-3-pro-preview',
+                contents: `Analyze ${url} for an infographic in ${language}.`,
+                config: { tools: [{ googleSearch: {} }] }
+            });
+            structuralSummary = analysisResponse.text || "";
+            const chunks = analysisResponse.candidates?.[0]?.groundingMetadata?.groundingChunks;
+            if (chunks) {
+                citations = chunks.map((c: any) => ({ uri: c.web?.uri, title: c.web?.title })).filter((c: any) => c.uri);
+            }
+        } catch (e) {
+            console.warn("Search grounding failed, falling back to direct summary", e);
+            structuralSummary = `Summary of ${url} in ${language}.`;
         }
-    } catch (e) {
-        structuralSummary = `Summary of ${url} in ${language}.`;
-    }
 
-    if (onProgress) onProgress("RENDERING INFOGRAPHIC...");
+        if (onProgress) onProgress("RENDERING INFOGRAPHIC...");
 
-    try {
         const response = await ai.models.generateContent({
             model: 'gemini-3-pro-image-preview',
             contents: `Create infographic: ${structuralSummary}. Style: ${style}. Language: ${language}.`,
@@ -297,8 +310,7 @@ export async function generateArticleInfographic(
         }
         return { imageData, citations };
     } catch (error) {
-        console.error("Article infographic generation failed:", error);
-        throw error;
+        handleGeminiError(error);
     }
 }
 
@@ -308,15 +320,14 @@ export async function generateCodeSnippet(
     contextImage?: { data: string, mimeType: string },
     systemContext?: string
 ): Promise<string> {
-    const ai = getAiClient();
-    const parts: any[] = [{ text: prompt }];
-    
-    // Logic to handle Design-to-Code: Inject image into parts if present
-    if (contextImage) {
-        parts.unshift({ inlineData: { data: contextImage.data, mimeType: contextImage.mimeType } });
-    }
-    
     try {
+        const ai = getAiClient();
+        const parts: any[] = [{ text: prompt }];
+        
+        if (contextImage) {
+            parts.unshift({ inlineData: { data: contextImage.data, mimeType: contextImage.mimeType } });
+        }
+        
         const response = await ai.models.generateContent({
             model: 'gemini-3-pro-preview',
             contents: { parts },
@@ -330,9 +341,7 @@ export async function generateCodeSnippet(
         });
         return response.text || "Failed to generate code.";
     } catch (error) {
-        // Detailed error logging for debugging API key issues
-        console.error("Code generation failed:", error);
-        throw error;
+        handleGeminiError(error);
     }
 }
 
@@ -341,8 +350,8 @@ export async function editImageWithGemini(
   mimeType: string,
   prompt: string
 ): Promise<string | null> {
-  const ai = getAiClient();
   try {
+      const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: { parts: [{ inlineData: { data: base64Data, mimeType: mimeType } }, { text: prompt }] },
@@ -355,7 +364,6 @@ export async function editImageWithGemini(
     }
     return null;
   } catch (error) {
-    console.error("Image editing failed:", error);
-    throw error;
+      handleGeminiError(error);
   }
 }
